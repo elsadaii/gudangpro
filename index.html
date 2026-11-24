@@ -478,7 +478,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.5.0';
+const GUDANGPRO_APP_VERSION = '0.5.1';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -693,6 +693,19 @@ async function approveStaffActivation(requestId){
  if(!confirm('Setujui permintaan ini dan aktifkan akun staff?'))return;
  try{await callStaffAdmin({action:'approve_activation',request_id:requestId});toast('Akun staff berhasil diaktifkan.');await refreshAdminActivity();await loadStaffList();}
  catch(e){toast(e.message||'Akun staff gagal diaktifkan.');}
+}
+
+let attendanceRealtimeChannel=null;
+function startAttendanceRealtime(){
+ if(!isAdmin()||attendanceRealtimeChannel)return;
+ attendanceRealtimeChannel=cloud.channel('gudangpro-staff-attendance')
+  .on('postgres_changes',{event:'*',schema:'public',table:'staff_login_sessions'},()=>{
+   if(isAdmin()&&document.getElementById('page-attendance')?.classList.contains('active'))loadStaffAttendance(true);
+  })
+  .subscribe(status=>{if(status==='SUBSCRIBED')console.log('Monitoring Staff realtime aktif');});
+}
+function stopAttendanceRealtime(){
+ if(attendanceRealtimeChannel){cloud.removeChannel(attendanceRealtimeChannel);attendanceRealtimeChannel=null;}
 }
 
 let staffAttendanceRecords=[];
@@ -1104,7 +1117,7 @@ const originalNavigate = navigate;
 navigate = function(page) {
   if (!isAdmin() && ['settings', 'reports', 'attendance'].includes(page)) { toast('Menu ini hanya tersedia untuk admin.'); return; }
   originalNavigate(page);
-  if (page === 'attendance') loadStaffAttendance();
+  if (page === 'attendance') { loadStaffAttendance(); startAttendanceRealtime(); } else stopAttendanceRealtime();
 };
 const originalRenderAll = renderAll;
 renderAll = function() { originalRenderAll(); applyRoleUI(); };
