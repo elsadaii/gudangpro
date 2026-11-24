@@ -296,31 +296,24 @@ function clearDemo(){if(!confirm('Hapus seluruh data contoh? Tindakan ini mengha
 function resetDemo(){if(!confirm('Muat ulang data contoh? Data yang ada sekarang akan diganti. Buat backup dahulu bila diperlukan.'))return;state=seed();save();renderAll();toast('Data demo dimuat ulang.');}
 let activeBarcodeScanner=null,scanTarget='',scanHandled=false;
 async function chooseMainRearCamera(){
-  // Ask permission first so Android exposes camera labels, then release the temporary stream.
-  let permissionStream=null;
+  // Let Android/Chrome choose its default rear camera for the environment constraint.
+  // On most phones this is the primary 1x lens, unlike manually picking an arbitrary rear camera ID.
+  let stream=null;
   try{
-    permissionStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{exact:'environment'}},
+      audio:false
+    });
+    const track=stream.getVideoTracks()[0];
+    if(!track)throw new Error('no-camera');
+    const settings=track.getSettings?track.getSettings():{};
+    const selectedId=settings.deviceId||'';
+    const selectedLabel=String(track.label||'');
+    if(!selectedId)throw new Error('no-camera-id');
+    return {id:selectedId,label:selectedLabel};
   }finally{
-    permissionStream?.getTracks().forEach(track=>track.stop());
+    stream?.getTracks().forEach(track=>track.stop());
   }
-  const devices=await Html5Qrcode.getCameras();
-  const cameras=(devices||[]).filter(device=>device.id);
-  if(!cameras.length)throw new Error('no-camera');
-  const labelOf=device=>String(device.label||'').toLowerCase();
-  const rear=cameras.filter(device=>/back|rear|environment|facing back/.test(labelOf(device)));
-  const candidates=rear.length?rear:cameras.filter(device=>!/front|user|facing front/.test(labelOf(device)));
-  if(!candidates.length)return cameras[0].id;
-  const score=device=>{
-    const label=labelOf(device);
-    let value=0;
-    if(/ultra.?wide|ultrawide|macro|telephoto|telephoto|depth|selfie|front/.test(label))value-=100;
-    if(/main|primary|wide angle|wide/.test(label)&&!/ultra.?wide|ultrawide/.test(label))value+=30;
-    if(/camera\\s*0|camera2?\\s*0|(^|[\\s,])0([\\s,]|$)/.test(label))value+=50;
-    if(/back|rear|environment|facing back/.test(label))value+=20;
-    return value;
-  };
-  candidates.sort((a,b)=>score(b)-score(a));
-  return candidates[0].id;
 }
 async function openScanner(target){
   scanTarget=target;scanHandled=false;
@@ -333,9 +326,9 @@ async function openScanner(target){
     activeBarcodeScanner=new Html5Qrcode('scannerRegion',{formatsToSupport:formats,verbose:false,useBarCodeDetectorIfSupported:false});
     const status=document.getElementById('scannerStatus');
     if(status)status.textContent='Memilih kamera belakang utama...';
-    const cameraId=await chooseMainRearCamera();
-    if(status)status.textContent='Mengaktifkan kamera belakang utama (1x)...';
-    await activeBarcodeScanner.start(cameraId,{fps:10,qrbox:(w,h)=>({width:Math.max(180,Math.floor(Math.min(w*.9,420))),height:Math.max(90,Math.floor(Math.min(h*.34,150)))})},async(decodedText)=>{
+    const selectedCamera=await chooseMainRearCamera();
+    if(status)status.textContent='Mengaktifkan kamera belakang utama: '+(selectedCamera.label||'kamera default belakang')+'...';
+    await activeBarcodeScanner.start(selectedCamera.id,{fps:10,qrbox:(w,h)=>({width:Math.max(180,Math.floor(Math.min(w*.9,420))),height:Math.max(90,Math.floor(Math.min(h*.34,150)))})},async(decodedText)=>{
       if(scanHandled)return;
       scanHandled=true;
       const value=String(decodedText||'').trim();
@@ -351,7 +344,7 @@ async function openScanner(target){
     if(el){
       if(err?.message==='secure')el.textContent='Kamera tidak tersedia pada file yang dibuka langsung. Jalankan aplikasi melalui alamat HTTPS (misalnya GitHub Pages), lalu izinkan akses kamera.';
       else if(err?.message==='library')el.textContent='Mesin pemindai belum berhasil dimuat. Periksa koneksi internet, lalu tutup dan coba lagi.';
-      else if(err?.message==='no-camera')el.textContent='Tidak ditemukan kamera yang dapat digunakan.';
+      else if(err?.message==='no-camera'||err?.message==='no-camera-id')el.textContent='Kamera belakang tidak ditemukan. Periksa izin kamera perangkat.';
       else el.textContent='Kamera belakang utama tidak dapat diakses. Pastikan izin kamera diberikan dan kamera tidak sedang dipakai aplikasi lain.';
     }
     await stopScanner();
