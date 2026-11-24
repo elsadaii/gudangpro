@@ -420,7 +420,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.3.4';
+const GUDANGPRO_APP_VERSION = '0.3.5';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -470,7 +470,8 @@ async function refreshAdminActivity(){
  body.innerHTML='<h4 style="margin:0 0 8px">Staff aktif ('+sessions.data.length+')</h4>'+ (sessions.data.length?sessions.data.map(x=>'<div class="staff-row"><div><b>'+esc(x.full_name||x.username||'Staff')+'</b><div class="item-sub">Login: '+new Date(x.started_at).toLocaleString('id-ID')+' · Aktif: '+new Date(x.last_seen_at).toLocaleTimeString('id-ID')+'</div></div><span class="badge good">Online</span></div>').join(''):'<div class="item-sub">Tidak ada staff aktif.</div>')+'<h4 style="margin:18px 0 8px">Permintaan aktivasi ('+requests.data.length+')</h4>'+(requests.data.length?requests.data.map(x=>'<div class="staff-row"><div><b>'+esc(x.username)+'</b><div class="item-sub">'+new Date(x.requested_at).toLocaleString('id-ID')+'</div></div><span class="badge warn">Menunggu</span></div>').join(''):'<div class="item-sub">Tidak ada permintaan aktivasi.</div>');
  }catch(e){body.innerHTML='<div class="notice warn">Panel aktivitas tidak dapat dimuat: '+esc(e.message||'')+'</div>';}
 }
-\nfunction showLogin(message = '') {
+
+function showLogin(message = '') {
   document.getElementById('appRoot').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'grid';
   const m = document.getElementById('loginMessage');
