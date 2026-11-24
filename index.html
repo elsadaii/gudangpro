@@ -77,6 +77,22 @@ tbody tr:hover{background:#f7faff}
  .panel-head,.panel-body{padding:16px}
 }
 
+
+/* Mobile navigation controls and always-visible account exit */
+.sidebar-close{display:none;margin-left:auto;width:32px;height:32px;border:1px solid #ffffff26;border-radius:9px;background:#ffffff12;color:#fff;font-size:22px;line-height:1}
+.sidebar-logout{width:100%;justify-content:center;margin-top:14px;background:#ffffff10;border:1px solid #ffffff24;color:#e8eef7}
+.sidebar-logout:hover{background:#ffffff1b;color:#fff}
+.mobile-overlay{position:fixed;inset:0;background:rgba(9,20,35,.48);z-index:25;display:none;backdrop-filter:blur(2px)}
+@media(max-width:760px){
+ .sidebar{z-index:40}
+ .sidebar.open~.main{pointer-events:none}
+ .mobile-overlay.show{display:block}
+ .sidebar-close{display:grid;place-items:center}
+ .brand{padding-bottom:26px}
+ .top-actions{gap:6px}
+ #signOutBtn{padding:7px 9px;font-size:10px}
+}
+
 </style>
 </head>
 <body>
@@ -94,8 +110,8 @@ tbody tr:hover{background:#f7faff}
   </div>
 </div>
 <div class="app" id="appRoot">
-<aside class="sidebar" id="sidebar">
-  <div class="brand"><div class="brand-mark">G</div><div><strong>GudangPro</strong><small>Inventory system</small></div></div>
+<div class="mobile-overlay" id="mobileOverlay" aria-hidden="true"></div><aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="brand-mark">G</div><div><strong>GudangPro</strong><small>Inventory system</small></div><button type="button" class="sidebar-close" id="sidebarClose" aria-label="Tutup menu">×</button></div>
   <div class="nav-label">Workspace</div>
   <nav class="nav" id="nav">
     <button class="active" data-page="dashboard"><span class="ico">▦</span>Dashboard</button>
@@ -106,7 +122,7 @@ tbody tr:hover{background:#f7faff}
   </nav>
   <div class="nav-label" style="margin-top:18px">System</div>
   <nav class="nav"><button data-page="settings"><span class="ico">⚙</span>Pengaturan & Backup</button></nav>
-  <div class="side-bottom"><div class="side-user"><div class="avatar">A</div><div><b>Administrator</b><div style="color:#8fa0b5;font-size:10px">Database cloud</div></div></div>GudangPro · v0.2.0<br>Data tersimpan online</div>
+  <div class="side-bottom"><div class="side-user"><div class="avatar">A</div><div><b>Administrator</b><div style="color:#8fa0b5;font-size:10px">Database cloud</div></div></div>GudangPro · v0.2.0<br>Data tersimpan online<button type="button" class="btn sidebar-logout" id="sidebarLogoutBtn">↪ Keluar dari akun</button></div>
 </aside>
 <main class="main">
 <header class="topbar"><div style="display:flex;align-items:center;gap:13px"><button class="menu-toggle" id="menuToggle">☰</button><div class="crumb">GudangPro <strong id="crumbTitle">Dashboard</strong></div></div><div class="top-actions"><div class="top-date" id="topDate"></div><div class="status-pill" id="connectionStatus"><i class="dot" id="connectionDot"></i><span id="connectionLabel">Menghubungkan database...</span></div><button class="btn small" id="signOutBtn" type="button" style="display:none">Keluar</button></div></header>
@@ -200,9 +216,20 @@ function statusOf(p){const q=totalStock(p);return q<=0?'out':q<=Number(p.minStoc
 function statusBadge(p){const s=statusOf(p);return s==='out'?'<span class="badge bad">● Habis</span>':s==='low'?'<span class="badge warn">● Menipis</span>':'<span class="badge good">● Aman</span>'}
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2600)}
 const titles={dashboard:'Dashboard',products:'Data Barang',transactions:'Transaksi Stok',stocktake:'Stock Opname',reports:'Laporan',settings:'Pengaturan'};
-function navigate(page){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+page).classList.add('active');document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));document.getElementById('crumbTitle').textContent=titles[page]||page;document.getElementById('sidebar').classList.remove('open');renderAll();}
+function navigate(page){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+page).classList.add('active');document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));document.getElementById('crumbTitle').textContent=titles[page]||page;document.getElementById('sidebar').classList.remove('open');setMobileMenu(false);renderAll();}
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
-document.getElementById('menuToggle').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
+
+function setMobileMenu(open){
+ const sidebar=document.getElementById('sidebar');
+ const overlay=document.getElementById('mobileOverlay');
+ if(sidebar) sidebar.classList.toggle('open',!!open);
+ if(overlay) overlay.classList.toggle('show',!!open);
+}
+document.getElementById('menuToggle').onclick=()=>setMobileMenu(!document.getElementById('sidebar').classList.contains('open'));
+document.getElementById('sidebarClose').onclick=()=>setMobileMenu(false);
+document.getElementById('mobileOverlay').onclick=()=>setMobileMenu(false);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')setMobileMenu(false);});
+
 document.getElementById('topDate').textContent=new Date().toLocaleDateString('id-ID',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 function renderAll(){document.getElementById('demoNotice').style.display=state.demo?'block':'none';renderDashboard();renderProducts();renderTransactions();renderStocktake();renderReports();renderSettings();}
 function renderDashboard(){const sku=state.products.length,units=state.balances.reduce((a,b)=>a+Number(b.qty||0),0),low=state.products.filter(p=>statusOf(p)!=='ok').length,value=state.products.reduce((a,p)=>a+totalStock(p)*Number(p.cost||0),0);const now=new Date();const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());const ins=state.transactions.filter(t=>(t.type==='in'||t.type==='return')&&new Date(t.date)>=start).reduce((a,t)=>a+t.qty,0);const outs=state.transactions.filter(t=>t.type==='out'&&new Date(t.date)>=start).reduce((a,t)=>a+t.qty,0);
@@ -524,12 +551,16 @@ async function bootCloudApp() {
     if (error || !data?.user) { message.textContent = 'Login gagal. Periksa email/username dan password.'; return; }
     await openAuthenticatedApp(data.user);
   });
-  document.getElementById('signOutBtn').addEventListener('click', async () => {
-    if (realtimeChannel) { await cloud.removeChannel(realtimeChannel); realtimeChannel = null; }
+  async function logoutGudangPro(){
+    if(!confirm('Yakin ingin keluar dari akun GudangPro?')) return;
+    if(realtimeChannel){await cloud.removeChannel(realtimeChannel);realtimeChannel=null;}
     await cloud.auth.signOut();
-    currentUser = null; currentProfile = null; state = defaultState();
+    currentUser=null;currentProfile=null;state=defaultState();
+    setMobileMenu(false);
     showLogin('Anda sudah keluar dari GudangPro.');
-  });
+  }
+  document.getElementById('signOutBtn').addEventListener('click',logoutGudangPro);
+  document.getElementById('sidebarLogoutBtn').addEventListener('click',logoutGudangPro);
   cloud.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT') {
       currentUser = null; currentProfile = null;
