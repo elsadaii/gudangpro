@@ -78,6 +78,24 @@ tbody tr:hover{background:#f7faff}
 }
 
 
+/* Keep product search and barcode scanner controls separated at every screen size */
+.search-with-scan{display:flex;align-items:center;gap:10px;flex:1 1 100%;width:100%;max-width:none;min-width:0;flex-wrap:wrap}
+.search-with-scan .search{flex:1 1 240px;width:auto;max-width:none;min-width:0}
+.search-with-scan .scan-search-btn{flex:0 0 auto;position:static;white-space:nowrap;margin:0}
+.toolbar>.actions{flex:0 1 auto;min-width:0}
+@media(max-width:760px){
+ .toolbar{align-items:stretch}
+ .search-with-scan{gap:9px}
+ .search-with-scan .search{flex:1 1 100%;width:100%;min-width:0}
+ .search-with-scan .scan-search-btn{width:100%;justify-content:center;min-height:40px}
+ .toolbar>.actions{width:100%;display:flex;flex-wrap:wrap}
+}
+@media(min-width:761px) and (max-width:1050px){
+ .search-with-scan{flex-wrap:wrap}
+ .search-with-scan .search{flex:1 1 100%}
+ .search-with-scan .scan-search-btn{margin-left:auto}
+}
+
 /* Mobile navigation controls and always-visible account exit */
 .sidebar-close{display:none;margin-left:auto;width:32px;height:32px;border:1px solid #ffffff26;border-radius:9px;background:#ffffff12;color:#fff;font-size:22px;line-height:1}
 .side-account{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}.sidebar-logout{width:auto;min-height:0;padding:5px 9px;font-size:10px;line-height:1.2;justify-content:center;margin:0;background:#ffffff10;border:1px solid #ffffff24;color:#e8eef7}
