@@ -926,6 +926,10 @@ async function openAuthenticatedApp(user) {
     currentProfile = await getActiveProfile(user);
     await saveOfflineSnapshot();
   } catch (error) {
+    if (error.message === 'Akun anda sedang tidak aktif, hubungi admin.') {
+      await cloud.auth.signOut(); currentUser = null; currentProfile = null;
+      showLogin(error.message); return;
+    }
     const cached = await readOfflineSnapshot(user.id);
     if (!cached?.profile || cached.profile.is_active !== true || !['admin', 'staff'].includes(cached.profile.role)) {
       await cloud.auth.signOut();
@@ -1105,8 +1109,9 @@ saveTransaction = async function(e, type) {
       warehouse = (state.warehouseRecords || []).find(w => w.name === warehouseName);
       if (!warehouse) return toast('Gudang ini belum tersimpan di perangkat. Hubungkan internet untuk memuat datanya.');
       const location = locationName === '-' ? null : (state.locationRecords || []).find(l => l.warehouse_id === warehouse.id && l.code === locationName);
-      if (locationName !== '-' && !location) return toast('Lokasi rak ini belum tersimpan di perangkat. Pilih lokasi yang sudah pernah dimuat saat online.');
-      locationId = location?.id || null;
+      if (!locationId && locationName === '-') return toast('Mode offline memerlukan lokasi rak yang sudah terdaftar agar saldo tetap akurat.');
+      if (!location) return toast('Lokasi rak ini belum tersimpan di perangkat. Pilih lokasi yang sudah pernah dimuat saat online.');
+      locationId = location.id;
     }
     const movementType = type === 'return' ? 'return' : type;
     const delta = type === 'out' ? -qty : qty;
