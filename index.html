@@ -478,7 +478,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.4.9';
+const GUDANGPRO_APP_VERSION = '0.5.0';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -671,7 +671,22 @@ async function startStaffSession(){
   },45000);
  }catch(e){console.warn('Session tracking unavailable',e);toast('Status login Staff belum tercatat: '+(e.message||'Periksa koneksi database.'));}
 }
-async function endStaffSession(){if(sessionHeartbeatTimer){clearInterval(sessionHeartbeatTimer);sessionHeartbeatTimer=null;}if(gudangproSessionId){try{await cloud.from('staff_login_sessions').update({ended_at:new Date().toISOString(),last_seen_at:new Date().toISOString()}).eq('id',gudangproSessionId);}catch(e){}gudangproSessionId=null;}}
+async function endStaffSession(){
+ if(sessionHeartbeatTimer){clearInterval(sessionHeartbeatTimer);sessionHeartbeatTimer=null;}
+ if(!gudangproSessionId)return;
+ const sessionId=gudangproSessionId;
+ try{
+  if(!navigator.onLine)throw new Error('Tidak ada koneksi internet.');
+  const endedAt=new Date().toISOString();
+  const {data,error}=await cloud.from('staff_login_sessions').update({ended_at:endedAt,last_seen_at:endedAt}).eq('id',sessionId).select('id').maybeSingle();
+  if(error)throw error;
+  if(!data)throw new Error('Sesi tidak ditemukan atau tidak memiliki izin untuk ditutup.');
+  gudangproSessionId=null;
+ }catch(e){
+  console.warn('Staff logout tracking gagal:',e);
+  toast('Logout sesi belum tercatat: '+(e.message||'Periksa koneksi.'));
+ }
+}
 async function approveStaffActivation(requestId){
  if(!isAdmin())return;
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(requestId||'')))return toast('Permintaan aktivasi tidak valid.');
