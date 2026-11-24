@@ -463,13 +463,154 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.4.4';
+const GUDANGPRO_APP_VERSION = '0.4.5';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   realtime: { params: { eventsPerSecond: 10 } }
 });
+
+// Offline cache and idempotent movement queue. Data is isolated per signed-in user.
+const OFFLINE_DB_NAME = 'gudangpro-offline';
+let offlineDbPromise = null;
+let offlinePendingCount = 0;
+let offlineSyncRunning = false;
+function openOfflineDb() {
+  if (offlineDbPromise) return offlineDbPromise;
+  offlineDbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(OFFLINE_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('snapshots')) db.createObjectStore('snapshots', { keyPath: 'userId' });
+      if (!db.objectStoreNames.contains('queue')) db.createObjectStore('queue', { keyPath: 'id' });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Penyimpanan offline tidak tersedia.'));
+  });
+  return offlineDbPromise;
+}
+async function offlineStore(mode, storeName, value, key) {
+  const db = await openOfflineDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, mode);
+    const store = tx.objectStore(storeName);
+    let request;
+    if (mode === 'readonly') request = storeName === 'queue' ? store.getAll() : store.get(key);
+    else if (value === null) request = store.delete(key);
+    else request = store.put(value);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function saveOfflineSnapshot() {
+  if (!currentUser || !state || state.demo) return;
+  try {
+    await offlineStore('readwrite', 'snapshots', {
+      userId: currentUser.id,
+      profile: currentProfile,
+      state: JSON.parse(JSON.stringify(state)),
+      savedAt: new Date().toISOString()
+    });
+  } catch (error) { console.warn('GudangPro offline cache:', error); }
+}
+async function readOfflineSnapshot(userId) {
+  try { return await offlineStore('readonly', 'snapshots', null, userId); }
+  catch (error) { console.warn('GudangPro offline cache read:', error); return null; }
+}
+async function getOfflineQueue() {
+  if (!currentUser) return [];
+  try { return (await offlineStore('readonly', 'queue')).filter(item => item.userId === currentUser.id).sort((a,b) => a.createdAt.localeCompare(b.createdAt)); }
+  catch (error) { console.warn('GudangPro offline queue read:', error); return []; }
+}
+async function updateOfflineQueueCount() {
+  const items = await getOfflineQueue();
+  offlinePendingCount = items.length;
+  const pill = document.getElementById('connectionStatus');
+  if (pill) {
+    const label = document.getElementById('connectionLabel');
+    if (label && !pill.dataset.baseLabel) pill.dataset.baseLabel = label.textContent || '';
+    if (label) {
+      const base = pill.dataset.baseLabel || label.textContent || '';
+      label.textContent = offlinePendingCount ? base + ' · ' + offlinePendingCount + ' antrean' : base;
+    }
+  }
+  return items;
+}
+async function enqueueOfflineMovement(payload) {
+  await offlineStore('readwrite', 'queue', {
+    id: payload.id, userId: currentUser.id, payload,
+    status: 'pending', error: '', createdAt: new Date().toISOString()
+  });
+  await updateOfflineQueueCount();
+}
+async function flushOfflineQueue() {
+  if (!navigator.onLine || !currentUser || offlineSyncRunning) return;
+  offlineSyncRunning = true;
+  let uploaded = false;
+  try {
+    const items = (await getOfflineQueue()).filter(item => item.status === 'pending');
+    for (const item of items) {
+      let { error } = await cloud.from('stock_movements').insert(item.payload);
+      if (error && error.code === '23505') {
+        const check = await cloud.from('stock_movements').select('id').eq('id', item.id).maybeSingle();
+        if (!check.error && check.data?.id) error = null;
+      }
+      if (error) {
+        const networkFailure = !navigator.onLine || error.status === 0 || /fetch|network|timeout|load failed/i.test(error.message || '');
+        item.status = networkFailure ? 'pending' : 'blocked';
+        item.error = error.message || 'Sinkronisasi gagal.';
+        await offlineStore('readwrite', 'queue', item);
+        if (!networkFailure) toast('Transaksi offline tertahan: ' + item.error);
+        break;
+      }
+      await offlineStore('readwrite', 'queue', null, item.id);
+      uploaded = true;
+    }
+    await updateOfflineQueueCount();
+    if (uploaded && navigator.onLine) await loadCloudData(true);
+  } catch (error) {
+    console.warn('GudangPro offline sync:', error);
+    setConnectionState('offline', 'Sinkronisasi tertunda');
+  } finally { offlineSyncRunning = false; }
+}
+async function retryOfflineQueue() {
+  const items = await getOfflineQueue();
+  for (const item of items) if (item.status === 'blocked') {
+    item.status = 'pending'; item.error = '';
+    await offlineStore('readwrite', 'queue', item);
+  }
+  await flushOfflineQueue();
+  await openOfflineQueuePanel();
+}
+async function openOfflineQueuePanel() {
+  const items = await getOfflineQueue();
+  const rows = items.length ? items.map(item =>
+    '<div class="staff-row"><div><b>' + esc(item.payload.reference_no || item.id) + '</b><div class="item-sub">' +
+    esc(item.payload.movement_type) + ' · ' + esc(item.payload.quantity_delta) + ' · ' +
+    esc(item.status === 'blocked' ? 'Perlu diperiksa' : 'Menunggu koneksi') +
+    (item.error ? '<br>' + esc(item.error) : '') + '</div></div></div>'
+  ).join('') : '<div class="empty">Tidak ada transaksi yang menunggu sinkronisasi.</div>';
+  openModal('Antrean Sinkronisasi Offline', '<div class="notice">Transaksi yang belum tersinkron tetap tersimpan di perangkat ini.</div>' + rows,
+    '<button class="btn" onclick="closeModal()">Tutup</button><button class="btn primary" onclick="retryOfflineQueue()">Coba Sinkronkan</button>');
+}
+function applyQueuedMovementLocally(payload, product, warehouse, locationName) {
+  const locationId = payload.location_id || null;
+  let balance = state.balances.find(b => b.productId === payload.product_id && b.warehouseId === payload.warehouse_id && (b.locationId || null) === locationId);
+  if (!balance) {
+    balance = { id: 'local-' + payload.id, productId: payload.product_id, warehouseId: payload.warehouse_id, locationId, warehouse, location: locationName || '-', qty: 0 };
+    state.balances.push(balance);
+  }
+  balance.qty = Number(balance.qty || 0) + Number(payload.quantity_delta);
+  state.transactions.unshift({
+    id: payload.id, code: payload.reference_no, date: new Date().toISOString(),
+    type: payload.movement_type, productId: product.id, sku: product.sku, name: product.name,
+    qty: Math.abs(Number(payload.quantity_delta)), warehouse, location: locationName || '-',
+    from: '-', to: '-', note: payload.notes || '', user: payload.created_by_name || currentOperatorName(),
+    pendingSync: true
+  });
+}
+
 let currentUser = null;
 let currentProfile = null;
 let realtimeChannel = null;
@@ -483,7 +624,8 @@ function setConnectionState(mode, label) {
   const pill = document.getElementById('connectionStatus');
   const dot = document.getElementById('connectionDot');
   const text = document.getElementById('connectionLabel');
-  if (text) text.textContent = label;
+  if (pill) pill.dataset.baseLabel = label;
+  if (text) text.textContent = offlinePendingCount ? label + ' · ' + offlinePendingCount + ' antrean' : label;
   if (!pill || !dot) return;
   pill.style.borderColor = mode === 'online' ? '#dcefe8' : mode === 'offline' ? '#f3d9dd' : '#f3e7ce';
   pill.style.background = mode === 'online' ? '#f2fbf7' : mode === 'offline' ? '#fff5f6' : '#fffaf0';
@@ -663,15 +805,16 @@ async function loadCloudData(quiet = false) {
   cloudLoading = true;
   if (!quiet) setConnectionState('pending', 'Memuat data cloud...');
   try {
-    const [whRes, productRes, balanceRes, movementRes, opnameRes, itemRes] = await Promise.all([
+    const [whRes, locationRes, productRes, balanceRes, movementRes, opnameRes, itemRes] = await Promise.all([
       cloud.from('warehouses').select('id, code, name, address, is_active').eq('is_active', true).order('name').limit(1000),
+      cloud.from('locations').select('id, warehouse_id, code, name').order('name').limit(5000),
       cloud.from('products').select('id, sku, barcode, name, category, unit, min_stock, cost, supplier, created_at, is_active').eq('is_active', true).order('name').limit(5000),
       cloud.from('inventory_balances').select('id, product_id, warehouse_id, location_id, quantity, updated_at, warehouses(name), locations(name)').order('updated_at', { ascending: false }).limit(5000),
       cloud.from('stock_movements').select('id, product_id, warehouse_id, location_id, movement_type, quantity_delta, reference_no, notes, created_by_name, created_at, products(name, sku, unit), warehouses(name), locations(name)').order('created_at', { ascending: false }).limit(5000),
       cloud.from('stock_opnames').select('id, opname_no, warehouse_id, notes, created_by_name, created_at, warehouses(name)').order('created_at', { ascending: false }).limit(2000),
       cloud.from('stock_opname_items').select('id, opname_id, product_id, location_id, system_quantity, counted_quantity, notes, products(name, sku, unit), locations(name)').limit(5000)
     ]);
-    for (const r of [whRes, productRes, balanceRes, movementRes, opnameRes, itemRes]) if (r.error) throw r.error;
+    for (const r of [whRes, locationRes, productRes, balanceRes, movementRes, opnameRes, itemRes]) if (r.error) throw r.error;
 
     if ((!whRes.data || !whRes.data.length) && isAdmin()) {
       await ensureWarehouse('Gudang Utama');
@@ -680,6 +823,7 @@ async function loadCloudData(quiet = false) {
     }
 
     const warehouses = whRes.data || [];
+    const locations = locationRes.data || [];
     const whById = new Map(warehouses.map(w => [w.id, w]));
     const products = (productRes.data || []).map(p => ({
       id: p.id, sku: p.sku || '', barcode: p.barcode || '', name: p.name || '',
@@ -729,11 +873,22 @@ async function loadCloudData(quiet = false) {
       };
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    state = { warehouses: warehouses.map(w => w.name), products, balances, transactions: tx, stocktakes, demo: false };
+    state = { warehouses: warehouses.map(w => w.name), warehouseRecords: warehouses, locationRecords: locations, products, balances, transactions: tx, stocktakes, demo: false };
+    await saveOfflineSnapshot();
+    await updateOfflineQueueCount();
     renderAll();
     setConnectionState('online', realtimeIsOnline ? 'Database & Realtime aktif' : 'Database Online');
   } catch (error) {
     console.error('GudangPro cloud load:', error);
+    const cached = currentUser ? await readOfflineSnapshot(currentUser.id) : null;
+    if (cached?.state) {
+      state = cached.state;
+      await updateOfflineQueueCount();
+      renderAll();
+      setConnectionState('offline', 'Mode Offline · data tersimpan');
+      if (!quiet) toast('Koneksi terputus. Data terakhir yang tersimpan sedang digunakan.');
+      return;
+    }
     setConnectionState('offline', 'Database Offline');
     if (!quiet) toast(error.message || 'Data cloud gagal dimuat.');
     throw error;
@@ -766,17 +921,25 @@ function startRealtime() {
 }
 async function openAuthenticatedApp(user) {
   currentUser = user;
+  let offlineProfile = false;
   try {
     currentProfile = await getActiveProfile(user);
+    await saveOfflineSnapshot();
   } catch (error) {
-    await cloud.auth.signOut();
-    currentUser = null; currentProfile = null;
-    showLogin(error.message || 'Akun tidak dapat digunakan.');
-    return;
+    const cached = await readOfflineSnapshot(user.id);
+    if (!cached?.profile || cached.profile.is_active !== true || !['admin', 'staff'].includes(cached.profile.role)) {
+      await cloud.auth.signOut();
+      currentUser = null; currentProfile = null;
+      showLogin(error.message || 'Akun belum pernah tersimpan untuk penggunaan offline. Hubungkan internet lalu masuk kembali.');
+      return;
+    }
+    currentProfile = cached.profile;
+    state = cached.state || state;
+    offlineProfile = true;
   }
   showApp();
-  // Record each Staff login; Admin dashboard reads the live activity panel.
-  if (currentProfile?.role === 'staff') startStaffSession();
+  // Staff session tracking requires a live connection; offline transactions are queued locally.
+  if (currentProfile?.role === 'staff' && !offlineProfile && navigator.onLine) startStaffSession();
   // Always land on the Dashboard after login (including Staff accounts).
   // This prevents a hidden/previous page from leaving the content area blank.
   navigate('dashboard');
@@ -788,9 +951,15 @@ async function openAuthenticatedApp(user) {
     navigate('dashboard');
     if (isAdmin()) refreshAdminActivity();
   } catch (error) {
+    const cached = await readOfflineSnapshot(user.id);
+    if (cached?.state) {
+      state = cached.state;
+      await updateOfflineQueueCount();
+      setConnectionState('offline', 'Mode Offline · data tersimpan');
+    }
     applyRoleUI();
     navigate('dashboard');
-    toast(error.message || 'Koneksi database gagal.');
+    if (!cached?.state) toast(error.message || 'Koneksi database gagal.');
   }
 }
 async function bootCloudApp() {
@@ -908,10 +1077,11 @@ saveTransaction = async function(e, type) {
   e.preventDefault();
   const f = new FormData(e.target), p = state.products.find(x => x.id === f.get('productId')), qty = Number(f.get('qty'));
   if (!p || !Number.isFinite(qty) || qty <= 0) return toast('Pilih barang dan jumlah yang valid.');
-  const reference = f.get('reference').trim();
-  const note = [reference ? `Ref: ${reference}` : '', f.get('note').trim()].filter(Boolean).join(' · ');
+  const reference = String(f.get('reference') || '').trim();
+  const note = [reference ? `Ref: ${reference}` : '', String(f.get('note') || '').trim()].filter(Boolean).join(' · ');
   try {
     if (type === 'move') {
+      if (!navigator.onLine) return toast('Mutasi antar lokasi belum dapat dicatat offline. Gunakan Barang Masuk/Keluar setelah koneksi pulih.');
       const src = state.balances.find(b => b.id === f.get('sourceId'));
       if (!src || src.qty < qty) return toast('Stok di lokasi asal tidak mencukupi.');
       const destWarehouse = await ensureWarehouse(f.get('toWarehouse'));
@@ -923,20 +1093,52 @@ saveTransaction = async function(e, type) {
         p_quantity: qty, p_reference_no: transferRef, p_notes: note || 'Mutasi antar lokasi'
       });
       if (error) throw error;
-    } else {
-      const warehouse = await ensureWarehouse(f.get('warehouse'));
-      const locationId = await getLocationId(warehouse.id, f.get('location').trim() || '-');
-      const movementType = type === 'return' ? 'return' : type;
-      const delta = type === 'out' ? -qty : qty;
-      const { error } = await cloud.from('stock_movements').insert({
-        product_id: p.id, warehouse_id: warehouse.id, location_id: locationId,
-        movement_type: movementType, quantity_delta: delta,
-        reference_no: reference || `TRX-${Date.now()}`, notes: note,
-        created_by: currentUser.id, created_by_name: currentOperatorName()
-      });
-      if (error) throw error;
+      closeModal(); await loadCloudData(true); toast('Mutasi tersimpan ke database.'); return;
     }
-    closeModal(); await loadCloudData(true); toast('Transaksi tersimpan ke database.');
+    let warehouse, locationId;
+    const warehouseName = String(f.get('warehouse') || '').trim();
+    const locationName = String(f.get('location') || '-').trim() || '-';
+    if (navigator.onLine) {
+      warehouse = await ensureWarehouse(warehouseName);
+      locationId = await getLocationId(warehouse.id, locationName);
+    } else {
+      warehouse = (state.warehouseRecords || []).find(w => w.name === warehouseName);
+      if (!warehouse) return toast('Gudang ini belum tersimpan di perangkat. Hubungkan internet untuk memuat datanya.');
+      const location = locationName === '-' ? null : (state.locationRecords || []).find(l => l.warehouse_id === warehouse.id && l.code === locationName);
+      if (locationName !== '-' && !location) return toast('Lokasi rak ini belum tersimpan di perangkat. Pilih lokasi yang sudah pernah dimuat saat online.');
+      locationId = location?.id || null;
+    }
+    const movementType = type === 'return' ? 'return' : type;
+    const delta = type === 'out' ? -qty : qty;
+    if (delta < 0) {
+      const available = Number(state.balances.find(b => b.productId === p.id && b.warehouseId === warehouse.id && (b.locationId || null) === (locationId || null))?.qty || 0);
+      if (available < qty) return toast(`Stok lokal tidak mencukupi. Tersedia: ${fmt(available)} ${p.unit}.`);
+    }
+    const id = crypto.randomUUID();
+    const payload = {
+      id, product_id: p.id, warehouse_id: warehouse.id, location_id: locationId,
+      movement_type: movementType, quantity_delta: delta,
+      reference_no: reference || `OFF-${id.slice(0, 8).toUpperCase()}`,
+      notes: note, created_by: currentUser.id, created_by_name: currentOperatorName()
+    };
+    await enqueueOfflineMovement(payload);
+    if (!navigator.onLine) {
+      applyQueuedMovementLocally(payload, p, warehouse.name, locationName);
+      await saveOfflineSnapshot();
+      renderAll();
+      closeModal();
+      toast('Transaksi tersimpan di perangkat dan menunggu internet.');
+      return;
+    }
+    await flushOfflineQueue();
+    const remaining = (await getOfflineQueue()).find(item => item.id === id);
+    closeModal();
+    if (remaining) {
+      if (remaining.status === 'blocked') await loadCloudData(true);
+      toast(remaining.status === 'blocked' ? 'Transaksi tertahan: ' + remaining.error : 'Transaksi masuk antrean sinkronisasi.');
+    } else {
+      toast('Transaksi tersimpan ke database.');
+    }
   } catch (error) { toast(error.message || 'Transaksi gagal disimpan.'); }
 };
 
@@ -1080,6 +1282,19 @@ renderSettings = function() {
   if (isAdmin()) loadStaffList();
   applyRoleUI();
 };
+
+// Install the app shell so the last loaded version can open without internet.
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('./sw.js').catch(error => console.warn('GudangPro service worker:', error));
+}
+window.addEventListener('offline', () => setConnectionState('offline', 'Mode Offline · data tersimpan'));
+window.addEventListener('online', async () => {
+  setConnectionState('pending', 'Koneksi kembali · sinkronisasi');
+  await flushOfflineQueue();
+  if (currentUser) await loadCloudData(true).catch(() => {});
+});
+document.getElementById('connectionStatus')?.addEventListener('click', openOfflineQueuePanel);
+document.getElementById('connectionStatus')?.setAttribute('title', 'Klik untuk melihat antrean sinkronisasi');
 
 bootCloudApp().catch(error => {
   console.error('GudangPro startup:', error);
