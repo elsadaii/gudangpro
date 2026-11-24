@@ -137,6 +137,7 @@ tbody tr:hover{background:#f7faff}
     <button data-page="transactions"><span class="ico">⇄</span>Transaksi Stok</button>
     <button data-page="stocktake"><span class="ico">☑</span>Stock Opname</button>
     <button data-page="reports"><span class="ico">▥</span>Laporan</button>
+    <button data-page="database" id="databaseNav" style="display:none"><span class="ico">▦</span>Database</button>
   </nav>
   <div class="nav-label" style="margin-top:18px">System</div>
   <nav class="nav"><button data-page="settings"><span class="ico">⚙</span>Pengaturan & Backup</button></nav>
@@ -188,6 +189,12 @@ tbody tr:hover{background:#f7faff}
   <div class="panel" style="margin-bottom:16px"><div class="panel-head"><div><h3>Daftar Stok Minimum</h3><p>Barang dengan stok total sama dengan atau di bawah batas minimum</p></div><span class="badge warn" id="lowCountBadge">0 barang</span></div><div class="table-wrap"><table><thead><tr><th>Barang</th><th>SKU</th><th>Stok Saat Ini</th><th>Stok Minimum</th><th>Kekurangan</th><th>Lokasi</th><th>Rekomendasi</th></tr></thead><tbody id="lowRows"></tbody></table></div></div>
   <div class="panel"><div class="panel-head"><div><h3>Ringkasan Nilai Stok per Kategori</h3><p>Estimasi nilai persediaan berdasarkan harga modal yang dimasukkan</p></div></div><div class="table-wrap"><table><thead><tr><th>Kategori</th><th>Jumlah SKU</th><th>Total Unit</th><th>Estimasi Nilai</th></tr></thead><tbody id="categoryRows"></tbody></table></div></div>
 </section>
+<section class="section" id="page-database">
+  <div class="page-head"><div><h1>Database</h1><p>Lihat data yang tersimpan di database GudangPro.</p></div><button class="btn" onclick="loadDatabaseTable()">↻ Muat Ulang</button></div>
+  <div class="panel"><div class="toolbar"><div class="field" style="min-width:220px;max-width:360px;flex:1"><label for="databaseTableSelect">Pilih tabel</label><select id="databaseTableSelect" onchange="loadDatabaseTable()"><option value="products">products · Barang</option><option value="inventory_balances">inventory_balances · Saldo Stok</option><option value="stock_movements">stock_movements · Transaksi Stok</option><option value="warehouses">warehouses · Gudang</option><option value="locations">locations · Lokasi Rak</option><option value="stock_opnames">stock_opnames · Stock Opname</option><option value="stock_opname_items">stock_opname_items · Detail Opname</option><option value="profiles">profiles · Akun</option></select></div><div id="databaseCount" class="item-sub">Pilih tabel untuk melihat data.</div></div>
+  <div class="table-wrap" style="max-height:65vh;overflow:auto"><table><thead id="databaseHead"></thead><tbody id="databaseRows"><tr><td>Pilih tabel lalu muat data.</td></tr></tbody></table></div>
+  <div class="table-foot"><span id="databasePageInfo">Maksimal 50 baris per tampilan.</span><span>Hanya admin yang dapat membuka halaman ini.</span></div></div>
+</section>
 <section class="section" id="page-settings">
   <div class="page-head"><div><h1>Pengaturan & Backup</h1><p>Kelola lokasi gudang serta cadangkan dan pulihkan data aplikasi.</p></div></div>
   <div class="notice success"><b>Database cloud:</b> data aplikasi tersimpan online dan disinkronkan antarperangkat.</div>
@@ -233,8 +240,8 @@ function productBalances(p){return state.balances.filter(b=>b.productId===p.id)}
 function statusOf(p){const q=totalStock(p);return q<=0?'out':q<=Number(p.minStock||0)?'low':'ok'}
 function statusBadge(p){const s=statusOf(p);return s==='out'?'<span class="badge bad">● Habis</span>':s==='low'?'<span class="badge warn">● Menipis</span>':'<span class="badge good">● Aman</span>'}
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2600)}
-const titles={dashboard:'Dashboard',products:'Data Barang',transactions:'Transaksi Stok',stocktake:'Stock Opname',reports:'Laporan',settings:'Pengaturan'};
-function navigate(page){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+page).classList.add('active');document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));document.getElementById('crumbTitle').textContent=titles[page]||page;document.getElementById('sidebar').classList.remove('open');setMobileMenu(false);renderAll();}
+const titles={dashboard:'Dashboard',products:'Data Barang',transactions:'Transaksi Stok',stocktake:'Stock Opname',reports:'Laporan',database:'Database',settings:'Pengaturan'};
+function navigate(page){if(page==='database'&&!isAdmin()){toast('Halaman ini hanya untuk admin.');return;}document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+page).classList.add('active');document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));document.getElementById('crumbTitle').textContent=titles[page]||page;document.getElementById('sidebar').classList.remove('open');setMobileMenu(false);renderAll();}
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
 
 function setMobileMenu(open){
@@ -250,6 +257,27 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')setMobileMenu(false)
 
 document.getElementById('topDate').textContent=new Date().toLocaleDateString('id-ID',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 function renderAll(){document.getElementById('demoNotice').style.display=state.demo?'block':'none';renderDashboard();renderProducts();renderTransactions();renderStocktake();renderReports();renderSettings();}
+const GUDANGPRO_DATABASE_TABLES=['products','inventory_balances','stock_movements','warehouses','locations','stock_opnames','stock_opname_items','profiles'];
+async function loadDatabaseTable(){
+  if(!isAdmin()){toast('Akses database hanya untuk admin.');return;}
+  const select=document.getElementById('databaseTableSelect');
+  const table=select?.value;
+  if(!GUDANGPRO_DATABASE_TABLES.includes(table))return;
+  const head=document.getElementById('databaseHead'),rows=document.getElementById('databaseRows'),count=document.getElementById('databaseCount');
+  if(!head||!rows||!count)return;
+  count.textContent='Memuat data...';head.innerHTML='';rows.innerHTML='<tr><td>Memuat...</td></tr>';
+  try{
+    const {data,error}=await cloud.from(table).select('*').limit(50);
+    if(error)throw error;
+    const records=data||[];
+    if(!records.length){rows.innerHTML='<tr><td>Tidak ada data pada tabel ini.</td></tr>';count.textContent='0 baris';document.getElementById('databasePageInfo').textContent='Maksimal 50 baris per tampilan.';return;}
+    const cols=Object.keys(records[0]);
+    head.innerHTML='<tr>'+cols.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr>';
+    rows.innerHTML=records.map(record=>'<tr>'+cols.map(c=>{let value=record[c];if(value===null||value===undefined)value='—';else if(typeof value==='object')value=JSON.stringify(value);return '<td style="max-width:260px;white-space:normal;overflow-wrap:anywhere">'+esc(String(value))+'</td>';}).join('')+'</tr>').join('');
+    count.textContent=records.length+' baris ditampilkan'+(records.length===50?' (maksimal 50)':'');
+    document.getElementById('databasePageInfo').textContent='Kolom: '+cols.length+' · Urutan data mengikuti database.';
+  }catch(error){head.innerHTML='';rows.innerHTML='<tr><td>Gagal memuat: '+esc(error.message||'Periksa izin akses database.')+'</td></tr>';count.textContent='Tidak dapat dimuat';}
+}
 function renderDashboard(){const sku=state.products.length,units=state.balances.reduce((a,b)=>a+Number(b.qty||0),0),low=state.products.filter(p=>statusOf(p)!=='ok').length,value=state.products.reduce((a,p)=>a+totalStock(p)*Number(p.cost||0),0);const now=new Date();const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());const ins=state.transactions.filter(t=>(t.type==='in'||t.type==='return')&&new Date(t.date)>=start).reduce((a,t)=>a+t.qty,0);const outs=state.transactions.filter(t=>t.type==='out'&&new Date(t.date)>=start).reduce((a,t)=>a+t.qty,0);
  const cards=[['Total SKU',fmt(sku),'Master barang terdaftar','▤','tint-blue'],['Total Unit Stok',fmt(units),'Akumulasi seluruh lokasi','▦','tint-green'],['Stok Perlu Perhatian',fmt(low),'Habis atau di bawah minimum','!','tint-amber'],['Estimasi Nilai Stok',money(value),'Berdasarkan harga modal','◇','tint-red']];document.getElementById('stats').innerHTML=cards.map(c=>`<div class="stat"><div class="stat-top"><span class="stat-label">${c[0]}</span><span class="stat-icon ${c[4]}">${c[3]}</span></div><div class="stat-value">${c[1]}</div><div class="stat-foot">${c[2]}</div></div>`).join('');
  const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-i);const next=new Date(d);next.setDate(next.getDate()+1);const f=state.transactions.filter(t=>new Date(t.date)>=d&&new Date(t.date)<next);days.push({label:d.toLocaleDateString('id-ID',{day:'2-digit',month:'short'}),in:f.filter(t=>t.type==='in'||t.type==='return').reduce((a,t)=>a+t.qty,0),out:f.filter(t=>t.type==='out').reduce((a,t)=>a+t.qty,0)});}const max=Math.max(1,...days.flatMap(x=>[x.in,x.out]));document.getElementById('activityChart').innerHTML=days.map(d=>`<div class="chart-col"><div class="bars"><div class="bar" style="height:${d.in/max*100}%" title="Masuk ${d.in}"></div><div class="bar out" style="height:${d.out/max*100}%" title="Keluar ${d.out}"></div></div><small>${d.label}</small></div>`).join('');
@@ -447,6 +475,10 @@ function profileHeading() {
   }
 }
 function applyRoleUI() {
+  const databaseNav = document.querySelector('#databaseNav');
+  const databasePage = document.querySelector('#page-database');
+  if (databaseNav) databaseNav.style.display = isAdmin() ? '' : 'none';
+  if (databasePage && !isAdmin() && databasePage.classList.contains('active')) navigate('dashboard');
   const settingsNav = document.querySelector('#page-settings');
   const settingsButton = document.querySelector('[data-page="settings"]');
   const reportsNav = document.querySelector('[data-page="reports"]');
