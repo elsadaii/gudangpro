@@ -166,6 +166,7 @@ tbody tr:hover{background:#f7faff}
     <button data-page="stocktake"><span class="ico">☑</span>Stock Opname</button>
     <button data-page="reports"><span class="ico">▥</span>Laporan</button>
     <button data-page="database" id="databaseNav" style="display:none"><span class="ico">▦</span>Database</button>
+    <button data-page="attendance" id="attendanceNav" style="display:none"><span class="ico">◷</span>Monitoring Staff</button>
   </nav>
   <div class="nav-label" style="margin-top:18px">System</div>
   <nav class="nav"><button data-page="settings"><span class="ico">⚙</span>Pengaturan & Backup</button></nav>
@@ -225,6 +226,16 @@ tbody tr:hover{background:#f7faff}
   <div class="panel"><div class="toolbar"><div id="databaseCount" class="item-sub">Daftar barang tersimpan.</div></div>
   <div class="table-wrap" style="max-height:65vh;overflow:auto"><table><thead id="databaseHead"></thead><tbody id="databaseRows"><tr><td>Pilih tabel lalu muat data.</td></tr></tbody></table></div>
   <div class="table-foot"><span id="databasePageInfo">Maksimal 50 baris per tampilan.</span><span>Hanya admin yang dapat membuka halaman ini.</span></div></div>
+</section>
+<section class="section" id="page-attendance">
+  <div class="page-head"><div><h1>Monitoring Staff</h1><p>Pantau status login, waktu mulai masuk, dan waktu logout setiap Staff.</p></div><button class="btn primary" type="button" onclick="loadStaffAttendance()">↻ Perbarui</button></div>
+  <div class="report-cards" id="staffAttendanceSummary"></div>
+  <div class="panel">
+    <div class="toolbar"><div><b>Riwayat sesi Staff</b><div class="item-sub">Status aktif berdasarkan heartbeat terakhir, diperbarui otomatis setiap 30 detik.</div></div><div class="actions"><input class="filter-select" id="staffAttendanceSearch" type="search" placeholder="Cari nama / username" oninput="filterStaffAttendance()"></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Nama Staff</th><th>Username</th><th>Status</th><th>Mulai Login</th><th>Terakhir Logout</th><th>Aktivitas Terakhir</th></tr></thead><tbody id="staffAttendanceRows"><tr><td colspan="6" class="empty">Tekan Perbarui untuk memuat data.</td></tr></tbody></table></div>
+    <div class="table-foot"><span id="staffAttendanceCount">Belum dimuat</span><span>Waktu ditampilkan dalam WIB (Asia/Jakarta).</span></div>
+  </div>
+  <div class="notice" style="margin-top:14px">Jika Staff menutup aplikasi atau kehilangan koneksi tanpa logout, waktu logout mungkin tidak tercatat. Sistem akan menandainya Tidak Aktif setelah tidak menerima heartbeat selama 2 menit.</div>
 </section>
 <section class="section" id="page-settings">
   <div class="page-head"><div><h1>Pengaturan & Backup</h1><p>Kelola lokasi gudang serta cadangkan dan pulihkan data aplikasi.</p></div></div>
@@ -287,7 +298,7 @@ function productBalances(p){return state.balances.filter(b=>b.productId===p.id)}
 function statusOf(p){const q=totalStock(p);return q<=0?'out':q<=Number(p.minStock||0)?'low':'ok'}
 function statusBadge(p){const s=statusOf(p);return s==='out'?'<span class="badge bad">● Habis</span>':s==='low'?'<span class="badge warn">● Menipis</span>':'<span class="badge good">● Aman</span>'}
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2600)}
-const titles={dashboard:'Dashboard',products:'Data Barang',transactions:'Transaksi Stok',stocktake:'Stock Opname',reports:'Laporan',database:'Database',settings:'Pengaturan',about:'Tentang Aplikasi'};
+const titles={dashboard:'Dashboard',products:'Data Barang',transactions:'Transaksi Stok',stocktake:'Stock Opname',reports:'Laporan',database:'Database',attendance:'Monitoring Staff',settings:'Pengaturan',about:'Tentang Aplikasi'};
 function navigate(page){if(page==='database'&&!isAdmin()){toast('Halaman ini hanya untuk admin.');return;}document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+page).classList.add('active');document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));document.getElementById('crumbTitle').textContent=titles[page]||page;document.getElementById('sidebar').classList.remove('open');setMobileMenu(false);renderAll();if(page==='database')loadDatabaseTable();}
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
 
@@ -467,7 +478,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.4.7';
+const GUDANGPRO_APP_VERSION = '0.4.8';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -659,6 +670,54 @@ async function approveStaffActivation(requestId){
  try{await callStaffAdmin({action:'approve_activation',request_id:requestId});toast('Akun staff berhasil diaktifkan.');await refreshAdminActivity();await loadStaffList();}
  catch(e){toast(e.message||'Akun staff gagal diaktifkan.');}
 }
+
+let staffAttendanceRecords=[];
+let staffAttendanceLoading=false;
+function attendanceDate(value){
+ if(!value)return '—';
+ const d=new Date(value);if(Number.isNaN(d.getTime()))return '—';
+ return new Intl.DateTimeFormat('id-ID',{timeZone:'Asia/Jakarta',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(d)+' WIB';
+}
+function filterStaffAttendance(){
+ const q=String(document.getElementById('staffAttendanceSearch')?.value||'').trim().toLowerCase();
+ const rows=staffAttendanceRecords.filter(x=>(x.full_name+' '+x.username).toLowerCase().includes(q));
+ const body=document.getElementById('staffAttendanceRows');if(!body)return;
+ body.innerHTML=rows.length?rows.map(x=>'<tr><td><b>'+esc(x.full_name||x.username||'Staff')+'</b></td><td>'+esc(x.username||'—')+'</td><td>'+(x.active?'<span class="badge good">● Aktif</span>':'<span class="badge neutral">● Tidak Aktif</span>')+'</td><td>'+attendanceDate(x.started_at)+'</td><td>'+(x.active?'—':(x.last_logout?attendanceDate(x.last_logout):'<span class="item-sub">Tidak tercatat</span>'))+'</td><td>'+attendanceDate(x.last_seen_at)+'</td></tr>').join(''):'<tr><td colspan="6" class="empty">Tidak ada Staff yang cocok.</td></tr>';
+ const count=document.getElementById('staffAttendanceCount');if(count)count.textContent='Menampilkan '+rows.length+' dari '+staffAttendanceRecords.length+' Staff';
+}
+async function loadStaffAttendance(quiet=false){
+ if(!isAdmin())return;
+ if(staffAttendanceLoading)return;
+ const body=document.getElementById('staffAttendanceRows');if(!body)return;
+ staffAttendanceLoading=true;
+ if(!quiet)body.innerHTML='<tr><td colspan="6" class="empty">Memuat riwayat sesi Staff...</td></tr>';
+ try{
+  const {data,error}=await cloud.from('staff_login_sessions').select('id,user_id,username,full_name,started_at,last_seen_at,ended_at').order('started_at',{ascending:false}).limit(2000);
+  if(error)throw error;
+  const groups=new Map();
+  (data||[]).forEach(s=>{
+   const key=s.user_id||s.username||s.id;
+   if(!groups.has(key))groups.set(key,[]);
+   groups.get(key).push(s);
+  });
+  const cutoff=Date.now()-120000;
+  staffAttendanceRecords=[...groups.values()].map(list=>{
+   list.sort((a,b)=>new Date(b.started_at||0)-new Date(a.started_at||0));
+   const latest=list[0],lastLogout=list.filter(s=>s.ended_at).sort((a,b)=>new Date(b.ended_at)-new Date(a.ended_at))[0]?.ended_at||null;
+   const active=!latest.ended_at&&latest.last_seen_at&&new Date(latest.last_seen_at).getTime()>=cutoff;
+   return {full_name:latest.full_name||latest.username||'Staff',username:latest.username||'—',active,started_at:latest.started_at,last_seen_at:latest.last_seen_at,last_logout:lastLogout};
+  }).sort((a,b)=>Number(b.active)-Number(a.active)||new Date(b.started_at||0)-new Date(a.started_at||0));
+  const activeCount=staffAttendanceRecords.filter(x=>x.active).length;
+  const summary=document.getElementById('staffAttendanceSummary');
+  if(summary)summary.innerHTML=[['Staff Terpantau',staffAttendanceRecords.length],['Sedang Aktif',activeCount],['Tidak Aktif',staffAttendanceRecords.length-activeCount]].map((x,i)=>'<div class="report-mini"><small>'+x[0]+'</small><strong'+(i===1?' style="color:#15966c"':'')+'>'+fmt(x[1])+'</strong></div>').join('');
+  filterStaffAttendance();
+ }catch(error){
+  body.innerHTML='<tr><td colspan="6" class="empty">Gagal memuat monitoring: '+esc(error.message||'Periksa izin database.')+'</td></tr>';
+  const count=document.getElementById('staffAttendanceCount');if(count)count.textContent='Gagal dimuat';
+ }finally{staffAttendanceLoading=false;}
+}
+setInterval(()=>{if(isAdmin()&&document.getElementById('page-attendance')?.classList.contains('active'))loadStaffAttendance(true);},30000);
+
 async function refreshAdminActivity(){
  const panel=document.getElementById('adminActivityPanel'),body=document.getElementById('adminActivityBody');if(!panel||!body||!isAdmin())return;panel.style.display='';
  try{const [sessions,requests]=await Promise.all([cloud.from('staff_login_sessions').select('*').is('ended_at',null).gte('last_seen_at',new Date(Date.now()-120000).toISOString()).order('last_seen_at',{ascending:false}),cloud.from('staff_activation_requests').select('*').eq('status','pending').order('requested_at',{ascending:false})]);
@@ -724,6 +783,10 @@ function applyRoleUI() {
   const activityPanel = document.getElementById('adminActivityPanel');
   if (activityPanel) activityPanel.style.display = isAdmin() ? 'block' : 'none';
   const databaseNav = document.querySelector('#databaseNav');
+  const attendanceNav = document.querySelector('#attendanceNav');
+  const attendancePage = document.querySelector('#page-attendance');
+  if (attendanceNav) attendanceNav.style.display = isAdmin() ? '' : 'none';
+  if (attendancePage && !isAdmin() && attendancePage.classList.contains('active')) navigate('dashboard');
   const databasePage = document.querySelector('#page-database');
   if (databaseNav) databaseNav.style.display = isAdmin() ? '' : 'none';
   if (databasePage && !isAdmin() && databasePage.classList.contains('active')) navigate('dashboard');
@@ -1015,8 +1078,9 @@ async function bootCloudApp() {
 // Keep the original screens, but route write operations through Supabase.
 const originalNavigate = navigate;
 navigate = function(page) {
-  if (!isAdmin() && ['settings', 'reports'].includes(page)) { toast('Menu ini hanya tersedia untuk admin.'); return; }
+  if (!isAdmin() && ['settings', 'reports', 'attendance'].includes(page)) { toast('Menu ini hanya tersedia untuk admin.'); return; }
   originalNavigate(page);
+  if (page === 'attendance') loadStaffAttendance();
 };
 const originalRenderAll = renderAll;
 renderAll = function() { originalRenderAll(); applyRoleUI(); };
