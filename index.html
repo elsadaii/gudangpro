@@ -398,7 +398,6 @@ async function loadCloudData(quiet = false) {
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
     state = { warehouses: warehouses.map(w => w.name), products, balances, transactions: tx, stocktakes, demo: false };
-    localStorage.removeItem(KEY);
     renderAll();
     setConnectionState('online', realtimeIsOnline ? 'Database & Realtime aktif' : 'Database Online');
   } catch (error) {
@@ -691,7 +690,7 @@ async function loadStaffList() {
   try {
     const data = await callStaffAdmin({ action: 'list' });
     if (!data.staff?.length) { list.innerHTML = '<div class="empty">Belum ada akun staff. Tekan Tambah Staff untuk membuat akses login.</div>'; return; }
-    list.innerHTML = data.staff.map(s => `<div class="staff-row"><div><b>${esc(s.full_name || s.username)}</b><div class="item-sub">Username: ${esc(s.username || '-')} · ${s.is_active ? 'Aktif' : 'Nonaktif'}</div></div><button class="btn small" onclick="editStaff('${s.id}','${esc(s.username || '')}','${esc(s.full_name || '')}',${s.is_active ? 'true' : 'false'})">Kelola</button></div>`).join('');
+    list.innerHTML = data.staff.map(s => `<div class="staff-row"><div><b>${esc(s.full_name || s.username)}</b><div class="item-sub">Username: ${esc(s.username || '-')} · ${s.is_active ? 'Aktif' : 'Nonaktif'}</div></div><button class="btn small" onclick="editStaff('${s.id}','${esc(s.username || '')}','${encodeURIComponent(s.full_name || '').replace(/'/g, '%27')}',${s.is_active ? 'true' : 'false'})">Kelola</button></div>`).join('');
   } catch (error) { list.innerHTML = `<div class="notice warn">${esc(error.message)}</div>`; }
 }
 function openStaffForm() {
@@ -699,9 +698,10 @@ function openStaffForm() {
   const body = `<form id="staffForm" class="form-grid" onsubmit="saveStaff(event,'create')"><div class="field"><label>Nama Staff *</label><input name="full_name" required placeholder="Nama petugas"></div><div class="field"><label>Username *</label><input name="username" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]+" placeholder="contoh: staff01"></div><div class="field full"><label>Password awal *</label><input type="password" name="password" required minlength="8" autocomplete="new-password"><small>Minimal 8 karakter. Bagikan langsung kepada staff secara aman.</small></div></form>`;
   openModal('Buat Akun Staff', body, `<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" onclick="document.getElementById('staffForm').requestSubmit()">Buat Akun</button>`);
 }
-function editStaff(id, username, fullName, active) {
+function editStaff(id, username, fullNameEncoded, active) {
   if (!isAdmin()) return;
-  const body = `<form id="staffForm" class="form-grid" onsubmit="saveStaff(event,'update','${id}')"><div class="field"><label>Nama Staff *</label><input name="full_name" required value="${fullName}"></div><div class="field"><label>Username *</label><input name="username" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]+" value="${username}"></div><div class="field full"><label>Password baru (opsional)</label><input type="password" name="password" minlength="8" autocomplete="new-password" placeholder="Kosongkan jika tidak diubah"></div><div class="field full"><label><input type="checkbox" name="is_active" ${active ? 'checked' : ''} style="width:auto"> Akun aktif</label><small>Akun nonaktif tidak dapat menggunakan database GudangPro.</small></div></form>`;
+  const fullName = decodeURIComponent(fullNameEncoded || '');
+  const body = `<form id="staffForm" class="form-grid" onsubmit="saveStaff(event,'update','${id}')"><div class="field"><label>Nama Staff *</label><input name="full_name" required value="${esc(fullName)}"></div><div class="field"><label>Username *</label><input name="username" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]+" value="${username}"></div><div class="field full"><label>Password baru (opsional)</label><input type="password" name="password" minlength="8" autocomplete="new-password" placeholder="Kosongkan jika tidak diubah"></div><div class="field full"><label><input type="checkbox" name="is_active" ${active ? 'checked' : ''} style="width:auto"> Akun aktif</label><small>Akun nonaktif tidak dapat menggunakan database GudangPro.</small></div></form>`;
   openModal('Kelola Akun Staff', body, `<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" onclick="document.getElementById('staffForm').requestSubmit()">Simpan Perubahan</button>`);
 }
 saveStaff = async function(e, action, id = '') {
