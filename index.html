@@ -203,7 +203,7 @@ tbody tr:hover{background:#f7faff}
     <div class="panel"><div class="panel-head"><div><h3>Lokasi Gudang</h3><p>Daftar lokasi yang bisa dipilih saat transaksi.</p></div></div><div class="panel-body"><div id="warehouseTags" class="warehouse-tags" style="margin-bottom:15px"></div><div class="field"><label>Tambah nama gudang</label><div style="display:flex;gap:8px"><input id="newWarehouse" placeholder="Contoh: Gudang Cabang 2"><button class="btn primary" onclick="addWarehouse()">Tambah</button></div></div></div></div>
     <div class="panel"><div class="panel-head"><div><h3>Backup & Pemulihan</h3><p>Simpan salinan data atau pulihkan dari file backup.</p></div></div><div class="panel-body"><p style="font-size:12px;color:#738196;line-height:1.7;margin-top:0">Backup mencakup master barang, saldo di setiap lokasi, transaksi, stock opname, dan daftar gudang.</p><div class="actions" style="margin-bottom:15px"><button class="btn primary" onclick="backupData()">↓ Download Backup</button><button class="btn" onclick="document.getElementById('restoreFile').click()">↑ Pulihkan Backup</button><input id="restoreFile" type="file" accept=".json" hidden onchange="restoreData(event)"></div><div class="notice success" style="margin:0">Disarankan membuat backup secara berkala, terutama sebelum mengimpor banyak data.</div></div></div>
     <div class="panel"><div class="panel-head"><div><h3>Data Contoh</h3><p>Kelola data demo untuk mencoba aplikasi.</p></div></div><div class="panel-body"><p style="font-size:12px;color:#738196;line-height:1.7;margin-top:0">Versi awal dilengkapi data contoh agar alur dashboard dan transaksi dapat dicoba. Data ini bukan data gudang sebenarnya.</p><div class="actions"><button class="btn danger" onclick="clearDemo()">Hapus Data Contoh</button><button class="btn" onclick="resetDemo()">Muat Ulang Demo</button></div></div></div>
-    <div class="panel"><div class="panel-head"><div><h3>Informasi Aplikasi</h3><p>Versi dan status penyimpanan.</p></div></div><div class="panel-body" style="font-size:12px;line-height:2;color:#728095"><div><b style="color:#344256">Nama:</b> GudangPro Starter</div><div><b style="color:#344256">Versi:</b> 0.2.0</div><div><b style="color:#344256">Penyimpanan:</b> Browser (localStorage)</div><div><b style="color:#344256">Koneksi database:</b> Belum terhubung</div><div><b style="color:#344256">Akses:</b> Perangkat ini saja</div></div></div>
+    <div class="panel"><div class="panel-head"><div><h3>Informasi Aplikasi</h3><p>Versi dan status penyimpanan.</p></div></div><div class="panel-body" style="font-size:12px;line-height:2;color:#728095"><div><b style="color:#344256">Nama:</b> GudangPro Starter</div><div><b style="color:#344256">Versi:</b> <span id="appVersionInfo">0.3.0</span></div><div><b style="color:#344256">Penyimpanan:</b> Browser (localStorage)</div><div><b style="color:#344256">Koneksi database:</b> Belum terhubung</div><div><b style="color:#344256">Akses:</b> Perangkat ini saja</div></div></div>
   </div>
 </section>
 </div></main></div>
@@ -321,7 +321,7 @@ function exportRows(rows,name){if(!rows.length){toast('Tidak ada data untuk diek
 function downloadTemplate(){const rows=[{SKU:'BRG-0001',Barcode:'8991234567890',Nama:'Contoh Nama Barang',Kategori:'Elektronik',Satuan:'pcs',Stok:10,Minimum:3,Harga_Modal:25000,Supplier:'Nama Supplier',Gudang:'Gudang Utama',Lokasi:'A-01-01'}];exportRows(rows,'template-import-barang');}
 function importProducts(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{let rows;if(window.XLSX){const wb=XLSX.read(ev.target.result,{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});}else{const txt=new TextDecoder().decode(ev.target.result);rows=parseCSV(txt);}let count=0;rows.forEach(r=>{const norm={};Object.keys(r).forEach(k=>norm[k.toLowerCase().replace(/[ _-]/g,'')]=r[k]);const sku=String(norm.sku||norm.kode||'').trim(),name=String(norm.nama||norm.namabarang||norm.name||'').trim();if(!sku||!name)return;let p=state.products.find(x=>x.sku.toLowerCase()===sku.toLowerCase());const val=(...keys)=>{for(const k of keys)if(norm[k]!==undefined&&norm[k]!=='')return norm[k];return ''};if(p){p.name=name;p.barcode=String(val('barcode','upc')||p.barcode);p.category=String(val('kategori','category')||p.category);p.unit=String(val('satuan','unit')||p.unit);p.minStock=Number(val('minimum','stokminimum','minstock')||p.minStock);p.cost=Number(val('hargamodal','cost')||p.cost);p.supplier=String(val('supplier')||p.supplier);}else{p={id:uid(),sku,barcode:String(val('barcode','upc')),name,category:String(val('kategori','category')),unit:String(val('satuan','unit')||'pcs'),minStock:Number(val('minimum','stokminimum','minstock')||0),cost:Number(val('hargamodal','cost')||0),supplier:String(val('supplier')),createdAt:today()};state.products.push(p);}const qty=val('stok','stock','jumlah');if(qty!==''){const wh=String(val('gudang','warehouse')||state.warehouses[0]||'Gudang Utama'),loc=String(val('lokasi','location')||'-');if(!state.warehouses.includes(wh))state.warehouses.push(wh);let b=state.balances.find(x=>x.productId===p.id&&x.warehouse===wh&&x.location===loc);if(b)b.qty=Number(qty);else state.balances.push({id:uid(),productId:p.id,warehouse:wh,location:loc,qty:Number(qty)});}count++;});save();renderAll();toast(`${count} baris barang berhasil diproses.`);}catch(err){console.error(err);toast('File gagal dibaca. Periksa format template.');}e.target.value='';};reader.readAsArrayBuffer(file);}
 function parseCSV(txt){const lines=txt.replace(/^\ufeff/,'').split(/\r?\n/).filter(Boolean);if(!lines.length)return[];const parse=line=>{const out=[];let v='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'&&line[i+1]==='"'){v+='"';i++;}else if(c==='"')q=!q;else if(c===','&&!q){out.push(v);v='';}else v+=c;}out.push(v);return out;};const h=parse(lines[0]);return lines.slice(1).map(l=>{const a=parse(l),o={};h.forEach((k,i)=>o[k]=a[i]??'');return o;});}
-function backupData(){const payload={app:'GudangPro',version:'0.2.0',exportedAt:today(),data:state};downloadBlob(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'backup-gudangpro-'+new Date().toISOString().slice(0,10)+'.json');toast('Backup berhasil dibuat.');}
+function backupData(){const payload={app:'GudangPro',version:GUDANGPRO_APP_VERSION,exportedAt:today(),data:state};downloadBlob(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'backup-gudangpro-'+new Date().toISOString().slice(0,10)+'.json');toast('Backup berhasil dibuat.');}
 function restoreData(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result),d=obj.data||obj;if(!Array.isArray(d.products)||!Array.isArray(d.balances)||!Array.isArray(d.transactions))throw new Error('Format');if(!confirm('Pulihkan backup? Data saat ini akan diganti.'))return;state=d;save();renderAll();toast('Backup berhasil dipulihkan.');}catch(err){toast('File backup tidak valid.');}e.target.value='';};r.readAsText(file);}
 function clearDemo(){if(!confirm('Hapus seluruh data contoh? Tindakan ini menghapus barang, saldo, transaksi, dan catatan stock opname contoh.'))return;state=defaultState();save();renderAll();toast('Data contoh dihapus. Aplikasi siap diisi.');}
 function resetDemo(){if(!confirm('Muat ulang data contoh? Data yang ada sekarang akan diganti. Buat backup dahulu bila diperlukan.'))return;state=seed();save();renderAll();toast('Data demo dimuat ulang.');}
@@ -420,6 +420,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
+const GUDANGPRO_APP_VERSION = '0.3.0';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -470,12 +471,16 @@ function profileHeading() {
   if (bottom) {
     const old = bottom.querySelector('.gudangpro-footnote');
     if (old) old.remove();
-    const note = document.createElement('div');
-    note.className = 'gudangpro-footnote';
-    note.style.marginTop = '9px';
-    note.textContent = 'GudangPro v0.2.0 · Database cloud';
-    bottom.appendChild(note);
+    if (isAdmin()) {
+      const note = document.createElement('div');
+      note.className = 'gudangpro-footnote';
+      note.style.marginTop = '9px';
+      note.textContent = 'GudangPro v' + GUDANGPRO_APP_VERSION + ' · Database cloud';
+      bottom.appendChild(note);
+    }
   }
+  const versionInfo = document.getElementById('appVersionInfo');
+  if (versionInfo) versionInfo.textContent = GUDANGPRO_APP_VERSION;
 }
 function applyRoleUI() {
   const databaseNav = document.querySelector('#databaseNav');
