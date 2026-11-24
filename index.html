@@ -111,6 +111,7 @@ tbody tr:hover{background:#f7faff}
  #signOutBtn{padding:7px 9px;font-size:10px}
 }
 
+.notification-wrap{position:relative;display:flex;align-items:center}.notification-bell{width:39px;height:39px;border:1px solid var(--line);background:#fff;color:#344256;border-radius:12px;display:grid;place-items:center;position:relative;transition:.18s}.notification-bell:hover{background:#f4f7ff;border-color:#dce5ff}.notification-bell svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.notification-count{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:20px;background:#dc4355;color:#fff;border:2px solid #fff;font-size:10px;font-weight:800;display:grid;place-items:center}.notification-menu{position:absolute;right:0;top:calc(100% + 12px);width:min(350px,calc(100vw - 28px));background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 45px #14243a24;z-index:60;overflow:hidden}.notification-menu-head{padding:15px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.notification-menu-head b{font-size:13px}.notification-menu-head span{font-size:10px;color:var(--muted)}.notification-list{max-height:340px;overflow:auto;padding:6px 12px}.notification-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 4px;border-bottom:1px solid #eef1f5}.notification-item:last-child{border-bottom:0}.notification-item-main{min-width:0;cursor:pointer;flex:1}.notification-item-main b{display:block;font-size:12px;color:#26364b}.notification-item-main small{display:block;font-size:10px;color:#8793a3;margin-top:4px}.notification-item .btn{flex-shrink:0}@media(max-width:700px){.topbar{padding:0 14px}.top-actions{gap:8px}.top-date{display:none}.notification-menu{right:-48px}}
 </style>
 </head>
 <body>
@@ -144,7 +145,7 @@ tbody tr:hover{background:#f7faff}
   <div class="side-bottom"><div class="side-user"><div class="avatar">A</div><div><b>Administrator</b><div style="color:#8fa0b5;font-size:10px">Database cloud</div></div></div></div>
 </aside>
 <main class="main">
-<header class="topbar"><div style="display:flex;align-items:center;gap:13px"><button class="menu-toggle" id="menuToggle">☰</button><div class="crumb">GudangPro <strong id="crumbTitle">Dashboard</strong></div></div><div class="top-actions"><div class="top-date" id="topDate"></div><div class="status-pill" id="connectionStatus"><i class="dot" id="connectionDot"></i><span id="connectionLabel">Menghubungkan database...</span></div><button class="btn small" id="signOutBtn" type="button" style="display:none">Keluar</button></div></header>
+<header class="topbar"><div style="display:flex;align-items:center;gap:13px"><button class="menu-toggle" id="menuToggle">☰</button><div class="crumb">GudangPro <strong id="crumbTitle">Dashboard</strong></div></div><div class="top-actions"><div class="top-date" id="topDate"></div><div class="notification-wrap" id="staffNotificationWrap" style="display:none"><button class="notification-bell" id="staffNotificationBell" type="button" aria-label="Notifikasi permintaan staff" onclick="toggleStaffNotifications(event)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count" id="staffNotificationCount" style="display:none">0</span></button><div class="notification-menu" id="staffNotificationMenu" style="display:none"><div class="notification-menu-head"><b>Notifikasi Staff</b><span id="staffNotificationSummary">Memuat...</span></div><div id="staffNotificationList" class="notification-list"><div class="empty">Memuat notifikasi...</div></div></div></div><div class="status-pill" id="connectionStatus"><i class="dot" id="connectionDot"></i><span id="connectionLabel">Menghubungkan database...</span></div><button class="btn small" id="signOutBtn" type="button" style="display:none">Keluar</button></div></header>
 <div class="content">
 <section class="section active" id="page-dashboard">
   <div class="page-head"><div><h1>Dashboard Gudang</h1><p>Ringkasan persediaan dan aktivitas gudang hari ini.</p></div><div class="actions"><button class="btn" onclick="navigate('transactions');setTimeout(()=>openTransaction('in'),50)">＋ Barang Masuk</button><button class="btn primary" onclick="navigate('transactions');setTimeout(()=>openTransaction('out'),50)">↗ Barang Keluar</button></div></div>
@@ -421,7 +422,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.3.9';
+const GUDANGPRO_APP_VERSION = '0.4.0';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -478,6 +479,23 @@ async function refreshAdminActivity(){
  body.innerHTML='<h4 style="margin:0 0 8px">Staff aktif ('+sessions.data.length+')</h4>'+ (sessions.data.length?sessions.data.map(x=>'<div class="staff-row"><div><b>'+esc(x.full_name||x.username||'Staff')+'</b><div class="item-sub">Login: '+new Date(x.started_at).toLocaleString('id-ID')+' · Aktif: '+new Date(x.last_seen_at).toLocaleTimeString('id-ID')+'</div></div><span class="badge good">Online</span></div>').join(''):'<div class="item-sub">Tidak ada staff aktif.</div>')+'<h4 style="margin:18px 0 8px">Permintaan aktivasi ('+requests.data.length+')</h4>'+(requests.data.length?requests.data.map(x=>'<div class="staff-row"><div><b>'+esc(x.username)+'</b><div class="item-sub">'+new Date(x.requested_at).toLocaleString('id-ID')+'</div></div><div style="display:flex;align-items:center;gap:8px"><span class="badge warn">Menunggu</span><button class="btn small primary" type="button" onclick="approveStaffActivation(\''+esc(x.id)+'\')">Setujui</button></div></div>').join(''):'<div class="item-sub">Tidak ada permintaan aktivasi.</div>');
  }catch(e){body.innerHTML='<div class="notice warn">Panel aktivitas tidak dapat dimuat: '+esc(e.message||'')+'</div>';}
 }
+
+let staffNotificationRows=[];
+async function refreshStaffNotifications(){
+ const wrap=document.getElementById('staffNotificationWrap'),count=document.getElementById('staffNotificationCount'),list=document.getElementById('staffNotificationList'),summary=document.getElementById('staffNotificationSummary');
+ if(!wrap||!isAdmin())return;wrap.style.display='flex';
+ try{
+  const {data,error}=await cloud.from('staff_activation_requests').select('id,username,requested_at').eq('status','pending').order('requested_at',{ascending:false});
+  if(error)throw error;staffNotificationRows=data||[];
+  if(count){count.textContent=staffNotificationRows.length>99?'99+':String(staffNotificationRows.length);count.style.display=staffNotificationRows.length?'grid':'none';}
+  if(summary)summary.textContent=staffNotificationRows.length+' permintaan menunggu';
+  if(list)list.innerHTML=staffNotificationRows.length?staffNotificationRows.map(x=>'<div class="notification-item"><div class="notification-item-main" onclick="openStaffNotification()"><b>Permintaan akses: '+esc(x.username)+'</b><small>'+new Date(x.requested_at).toLocaleString('id-ID')+'</small></div><button class="btn small primary" type="button" onclick="approveStaffActivation(\\''+esc(x.id)+'\\')">Setujui</button></div>').join(''):'<div class="empty">Tidak ada permintaan akses staff baru.</div>';
+ }catch(e){if(list)list.innerHTML='<div class="empty">Notifikasi gagal dimuat.</div>';if(summary)summary.textContent='Tidak dapat diperbarui';}
+}
+function toggleStaffNotifications(event){if(event)event.stopPropagation();const menu=document.getElementById('staffNotificationMenu');if(!menu||!isAdmin())return;const opening=menu.style.display==='none';menu.style.display=opening?'block':'none';if(opening)refreshStaffNotifications();}
+function openStaffNotification(){const menu=document.getElementById('staffNotificationMenu');if(menu)menu.style.display='none';navigate('dashboard');setTimeout(()=>{const panel=document.getElementById('adminActivityPanel');if(panel){panel.scrollIntoView({behavior:'smooth',block:'center'});refreshAdminActivity();}},80);}
+document.addEventListener('click',event=>{const wrap=document.getElementById('staffNotificationWrap'),menu=document.getElementById('staffNotificationMenu');if(wrap&&menu&&!wrap.contains(event.target))menu.style.display='none';});
+
 
 function showLogin(message = '') {
   document.getElementById('appRoot').style.display = 'none';
@@ -690,6 +708,13 @@ function startRealtime() {
     realtimeChannel = realtimeChannel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
       if (currentUser && !cloudLoading) loadCloudData(true).catch(() => {});
     });
+  }
+  if (isAdmin()) {
+    realtimeChannel = realtimeChannel.on('postgres_changes', { event: '*', schema: 'public', table: 'staff_activation_requests' }, payload => {
+      refreshStaffNotifications(); refreshAdminActivity();
+      if (payload.eventType === 'INSERT' && payload.new?.status === 'pending') toast('Permintaan akses staff baru: ' + (payload.new.username || 'Staff'));
+    });
+    refreshStaffNotifications();
   }
   realtimeChannel.subscribe(status => {
     realtimeIsOnline = status === 'SUBSCRIBED';
