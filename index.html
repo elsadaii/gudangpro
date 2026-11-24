@@ -301,11 +301,14 @@ async function chooseGudangProMainCamera(){
   try{
     const devices=await navigator.mediaDevices.enumerateDevices();
     const cameras=devices.filter(device=>device.kind==='videoinput');
-    const backCameras=cameras.filter(device=>{const label=(device.label||'').toLowerCase();return /back|rear|environment|belakang/.test(label)&&!/ultra.?wide|wide.?angle|tele(photo)?|macro|depth|front|selfie/.test(label);});
-    const primaryCamera=backCameras.find(device=>{const label=(device.label||'').toLowerCase();return /camera2?\\s*0\\b|camera\\s*0\\b/.test(label)||/\\b(main|primary)\\b/.test(label);});
-    const selected=primaryCamera||backCameras[0];if(!selected)throw new Error('Kamera belakang utama tidak terdeteksi.');
-    probe.getTracks().forEach(track=>track.stop());return {id:selected.deviceId,label:selected.label||'Camera 0',constraints:baseVideo};
-  }catch(error){if(probe.active)probe.getTracks().forEach(track=>track.stop());throw error;}
+    const backCameras=cameras.filter(device=>{const label=(device.label||'').toLowerCase();return /back|rear|environment|belakang|facing back/.test(label)&&!/ultra.?wide|wide.?angle|tele(photo)?|macro|depth|front|selfie/.test(label);});
+    // Explicitly prefer the physical device exposed by Android as Camera 0.
+    const cameraZero=backCameras.find(device=>{const label=(device.label||'').toLowerCase();return /\\bcamera\\s*0\\b/.test(label)||/^\\s*0\\s*[,(:-]/.test(label)||/\\bcamera2\\s*0\\b/.test(label);});
+    const selected=cameraZero||backCameras[0];
+    if(!selected)throw new Error('Camera 0 tidak terdeteksi sebagai kamera belakang. Pastikan izin kamera aktif.');
+    probe.getTracks().forEach(track=>track.stop());
+    return {id:selected.deviceId,label:'Camera 0'+(selected.label?' · '+selected.label:''),constraints:baseVideo};
+  }catch(error){probe.getTracks().forEach(track=>track.stop());throw error;}
 }
 async function loadGudangProZXing(){
   if(window.ZXing)return;
