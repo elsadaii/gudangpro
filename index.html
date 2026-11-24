@@ -162,10 +162,11 @@ tbody tr:hover{background:#f7faff}
     <button data-page="stocktake"><span class="ico">☑</span>Stock Opname</button>
     <button data-page="reports"><span class="ico">▥</span>Laporan</button>
     <button data-page="database" id="databaseNav" style="display:none"><span class="ico">▦</span>Database</button>
-    <button data-page="about"><span class="ico">ⓘ</span>Tentang Aplikasi</button>
   </nav>
   <div class="nav-label" style="margin-top:18px">System</div>
   <nav class="nav"><button data-page="settings"><span class="ico">⚙</span>Pengaturan & Backup</button></nav>
+  <div style="margin:14px 14px 8px;border-top:1px solid rgba(148,163,184,.18)"></div>
+  <nav class="nav"><button data-page="about"><span class="ico">ⓘ</span>Tentang Aplikasi</button></nav>
   <div class="side-bottom"><div class="side-user"><div class="avatar">A</div><div><b>Administrator</b><div style="color:#8fa0b5;font-size:10px">Database cloud</div></div></div></div>
 </aside>
 <main class="main">
@@ -246,7 +247,7 @@ tbody tr:hover{background:#f7faff}
     <div class="panel"><div class="panel-body"><b style="font-size:13px;color:#26364b">▣ Barcode & Opname</b><p style="font-size:12px;line-height:1.7;color:#718096;margin-bottom:0">Gunakan kamera untuk memindai barcode dan cocokkan stok sistem dengan jumlah fisik.</p></div></div>
     <div class="panel"><div class="panel-body"><b style="font-size:13px;color:#26364b">☁️ Database Cloud</b><p style="font-size:12px;line-height:1.7;color:#718096;margin-bottom:0">Data disimpan online dan diperbarui antarperangkat melalui sinkronisasi database.</p></div></div>
   </div>
-  <div class="panel"><div class="panel-head"><div><h3>Informasi Aplikasi</h3><p>Identitas dan status sistem yang sedang digunakan.</p></div></div><div class="panel-body" id="aboutAppInfo" style="font-size:12px;line-height:2;color:#728095"><div><b style="color:#344256">Nama:</b> GudangPro</div><div><b style="color:#344256">Versi:</b> <span id="appVersionInfo">0.4.3</span></div><div><b style="color:#344256">Penyimpanan:</b> Supabase Cloud</div><div><b style="color:#344256">Akses:</b> Admin dan Staff Gudang</div><div><b style="color:#344256">Sinkronisasi:</b> Realtime database</div></div></div>
+  <div class="panel"><div class="panel-head"><div><h3>Informasi Aplikasi</h3><p>Identitas dan status sistem yang sedang digunakan.</p></div></div><div class="panel-body" id="aboutAppInfo" style="font-size:12px;line-height:2;color:#728095"><div><b style="color:#344256">Nama:</b> GudangPro</div><div><b style="color:#344256">Versi:</b> <span id="appVersionInfo">0.4.4</span></div><div><b style="color:#344256">Penyimpanan:</b> Supabase Cloud</div><div><b style="color:#344256">Akses:</b> Admin dan Staff Gudang</div><div><b style="color:#344256">Sinkronisasi:</b> Realtime database</div></div></div>
 </section>
 </div></main></div>
 <div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"><div class="modal-head"><h2 id="modalTitle">Form</h2><button class="close" onclick="closeModal()">×</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
@@ -462,7 +463,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.4.3';
+const GUDANGPRO_APP_VERSION = '0.4.4';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
