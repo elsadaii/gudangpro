@@ -478,7 +478,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.4.8';
+const GUDANGPRO_APP_VERSION = '0.4.9';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -656,11 +656,20 @@ function showActivationLink(username){
  link.onclick=async ev=>{ev.preventDefault();try{const {data,error}=await cloud.rpc('request_staff_activation',{p_username:clean});if(error)throw error;document.getElementById('loginMessage').textContent=data?'Permintaan aktivasi telah dikirim ke admin.':'Username tidak ditemukan atau akun tidak nonaktif.';wrap.style.display='none';}catch(e){document.getElementById('loginMessage').textContent='Permintaan gagal. Coba kembali nanti.';}};
 }
 async function startStaffSession(){
- if(!currentUser||!currentProfile)return;
- try{const {data,error}=await cloud.from('staff_login_sessions').insert({user_id:currentUser.id,username:currentProfile.username,full_name:currentProfile.full_name}).select('id').single();if(error)throw error;gudangproSessionId=data.id;
- if(sessionHeartbeatTimer)clearInterval(sessionHeartbeatTimer);
- sessionHeartbeatTimer=setInterval(async()=>{if(gudangproSessionId)await cloud.from('staff_login_sessions').update({last_seen_at:new Date().toISOString()}).eq('id',gudangproSessionId);},45000);
- }catch(e){console.warn('Session tracking unavailable',e);}
+ if(!currentUser||!currentProfile||currentProfile.role!=='staff'||!navigator.onLine)return;
+ if(gudangproSessionId)return;
+ try{
+  const {data,error}=await cloud.rpc('start_staff_session');
+  if(error)throw error;
+  if(!data)throw new Error('Database tidak mengembalikan ID sesi Staff.');
+  gudangproSessionId=data;
+  if(sessionHeartbeatTimer)clearInterval(sessionHeartbeatTimer);
+  sessionHeartbeatTimer=setInterval(async()=>{
+   if(!gudangproSessionId||!navigator.onLine)return;
+   const {error:updateError}=await cloud.from('staff_login_sessions').update({last_seen_at:new Date().toISOString()}).eq('id',gudangproSessionId);
+   if(updateError)console.warn('Staff heartbeat gagal:',updateError.message);
+  },45000);
+ }catch(e){console.warn('Session tracking unavailable',e);toast('Status login Staff belum tercatat: '+(e.message||'Periksa koneksi database.'));}
 }
 async function endStaffSession(){if(sessionHeartbeatTimer){clearInterval(sessionHeartbeatTimer);sessionHeartbeatTimer=null;}if(gudangproSessionId){try{await cloud.from('staff_login_sessions').update({ended_at:new Date().toISOString(),last_seen_at:new Date().toISOString()}).eq('id',gudangproSessionId);}catch(e){}gudangproSessionId=null;}}
 async function approveStaffActivation(requestId){
@@ -1010,7 +1019,7 @@ async function openAuthenticatedApp(user) {
   }
   showApp();
   // Staff session tracking requires a live connection; offline transactions are queued locally.
-  if (currentProfile?.role === 'staff' && !offlineProfile && navigator.onLine) startStaffSession();
+  if (currentProfile?.role === 'staff' && !offlineProfile && navigator.onLine) await startStaffSession();
   // Always land on the Dashboard after login (including Staff accounts).
   // This prevents a hidden/previous page from leaving the content area blank.
   navigate('dashboard');
