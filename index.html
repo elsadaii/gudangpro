@@ -80,7 +80,7 @@ tbody tr:hover{background:#f7faff}
 
 /* Mobile navigation controls and always-visible account exit */
 .sidebar-close{display:none;margin-left:auto;width:32px;height:32px;border:1px solid #ffffff26;border-radius:9px;background:#ffffff12;color:#fff;font-size:22px;line-height:1}
-.sidebar-logout{width:100%;justify-content:center;margin-top:14px;background:#ffffff10;border:1px solid #ffffff24;color:#e8eef7}
+.side-account{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}.sidebar-logout{width:auto;min-height:0;padding:5px 9px;font-size:10px;line-height:1.2;justify-content:center;margin:0;background:#ffffff10;border:1px solid #ffffff24;color:#e8eef7}
 .sidebar-logout:hover{background:#ffffff1b;color:#fff}
 .mobile-overlay{position:fixed;inset:0;background:rgba(9,20,35,.48);z-index:25;display:none;backdrop-filter:blur(2px)}
 @media(max-width:760px){
@@ -122,7 +122,7 @@ tbody tr:hover{background:#f7faff}
   </nav>
   <div class="nav-label" style="margin-top:18px">System</div>
   <nav class="nav"><button data-page="settings"><span class="ico">⚙</span>Pengaturan & Backup</button></nav>
-  <div class="side-bottom"><div class="side-user"><div class="avatar">A</div><div><b>Administrator</b><div style="color:#8fa0b5;font-size:10px">Database cloud</div></div></div>GudangPro · v0.2.0<br>Data tersimpan online<button type="button" class="btn sidebar-logout" id="sidebarLogoutBtn">↪ Keluar dari akun</button></div>
+  <div class="side-bottom"><div class="side-user"><div class="avatar">A</div><div class="side-account"><b>Administrator</b><button type="button" class="btn sidebar-logout" id="sidebarLogoutBtn">↪ Keluar</button><div style="color:#8fa0b5;font-size:10px">Database cloud</div></div></div>GudangPro · v0.2.0<br>Data tersimpan online</div>
 </aside>
 <main class="main">
 <header class="topbar"><div style="display:flex;align-items:center;gap:13px"><button class="menu-toggle" id="menuToggle">☰</button><div class="crumb">GudangPro <strong id="crumbTitle">Dashboard</strong></div></div><div class="top-actions"><div class="top-date" id="topDate"></div><div class="status-pill" id="connectionStatus"><i class="dot" id="connectionDot"></i><span id="connectionLabel">Menghubungkan database...</span></div><button class="btn small" id="signOutBtn" type="button" style="display:none">Keluar</button></div></header>
