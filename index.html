@@ -121,7 +121,7 @@ tbody tr:hover{background:#f7faff}
     <form id="loginForm">
       <div class="field"><label>Email Admin / Username Staff</label><input id="loginIdentity" autocomplete="username" required placeholder="Email admin atau username staff"></div>
       <div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Masukkan password"></div>
-      <div id="loginMessage" class="login-message">Memeriksa koneksi database...</div>
+      <div id="loginMessage" class="login-message">Memeriksa koneksi database...</div><div id="activationLinkWrap" style="display:none;text-align:center;margin:8px 0 12px;font-size:12px"><a href="#" id="activationRequestLink" style="color:#3568dc;font-weight:700">Hubungi admin</a></div>
       <button id="loginSubmit" class="btn primary" type="submit">Masuk ke GudangPro</button>
     </form>
     <div class="login-help">Akun staff dibuat oleh Admin. Staff tidak perlu memiliki email. Jangan bagikan password kepada orang lain.</div>
@@ -154,7 +154,7 @@ tbody tr:hover{background:#f7faff}
     <div class="panel"><div class="panel-head"><div><h3>Aktivitas Stok</h3><p>Barang masuk dan keluar dalam 7 hari terakhir</p></div><div class="legend"><span><i></i>Masuk</span><span><i class="alt"></i>Keluar</span></div></div><div class="panel-body"><div class="chart" id="activityChart"></div></div></div>
     <div class="panel"><div class="panel-head"><div><h3>Perlu Perhatian</h3><p>Barang yang mencapai batas stok minimum</p></div><button class="btn small soft" onclick="navigate('reports')">Lihat semua →</button></div><div class="panel-body"><div class="low-list" id="lowList"></div></div></div>
   </div>
-  <div class="panel"><div class="panel-head"><div><h3>Transaksi Terbaru</h3><p>Catatan aktivitas persediaan terakhir</p></div><button class="btn small" onclick="navigate('transactions')">Semua transaksi →</button></div><div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Barang</th><th>Jenis</th><th>Qty</th><th>Lokasi</th><th>Petugas</th></tr></thead><tbody id="recentTransactions"></tbody></table></div></div>
+  <div id="adminActivityPanel" class="panel" style="display:none;margin-bottom:16px"><div class="panel-head"><div><h3>Notifikasi & Sesi Staff</h3><p>Permintaan aktivasi dan sesi aktif staff</p></div><button class="btn small" onclick="refreshAdminActivity()">Refresh</button></div><div class="panel-body" id="adminActivityBody">Memuat...</div></div><div class="panel"><div class="panel-head"><div><h3>Transaksi Terbaru</h3><p>Catatan aktivitas persediaan terakhir</p></div><button class="btn small" onclick="navigate('transactions')">Semua transaksi →</button></div><div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Barang</th><th>Jenis</th><th>Qty</th><th>Lokasi</th><th>Petugas</th></tr></thead><tbody id="recentTransactions"></tbody></table></div></div>
 </section>
 <section class="section" id="page-products">
   <div class="page-head"><div><h1>Data Barang</h1><p>Kelola master barang, barcode, lokasi, dan batas stok minimum.</p></div><div class="actions"><button class="btn" onclick="downloadTemplate()">↓ Template</button><button class="btn" onclick="document.getElementById('importFile').click()">↑ Import Excel</button><button class="btn primary" onclick="openProduct()">＋ Tambah Barang</button><input id="importFile" type="file" accept=".xlsx,.xls,.csv" hidden onchange="importProducts(event)"></div></div>
@@ -420,7 +420,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.3.1';
+const GUDANGPRO_APP_VERSION = '0.3.2';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -447,11 +447,34 @@ function setConnectionState(mode, label) {
   pill.style.color = mode === 'online' ? '#16825f' : mode === 'offline' ? '#bd4050' : '#a87318';
   dot.style.background = mode === 'online' ? '#19aa7d' : mode === 'offline' ? '#d94c5c' : '#d58b20';
 }
-function showLogin(message = '') {
+let gudangproSessionId=null, sessionHeartbeatTimer=null;
+function showActivationLink(username){
+ const wrap=document.getElementById('activationLinkWrap'), link=document.getElementById('activationRequestLink');
+ if(!wrap||!link)return;
+ const clean=String(username||'').trim().toLowerCase();
+ wrap.style.display=clean&&!clean.includes('@')?'block':'none';
+ link.onclick=async ev=>{ev.preventDefault();try{const {data,error}=await cloud.rpc('request_staff_activation',{p_username:clean});if(error)throw error;document.getElementById('loginMessage').textContent=data?'Permintaan aktivasi telah dikirim ke admin.':'Username tidak ditemukan atau akun tidak nonaktif.';wrap.style.display='none';}catch(e){document.getElementById('loginMessage').textContent='Permintaan gagal. Coba kembali nanti.';}};
+}
+async function startStaffSession(){
+ if(!currentUser||!currentProfile)return;
+ try{const {data,error}=await cloud.from('staff_login_sessions').insert({user_id:currentUser.id,username:currentProfile.username,full_name:currentProfile.full_name}).select('id').single();if(error)throw error;gudangproSessionId=data.id;
+ if(sessionHeartbeatTimer)clearInterval(sessionHeartbeatTimer);
+ sessionHeartbeatTimer=setInterval(async()=>{if(gudangproSessionId)await cloud.from('staff_login_sessions').update({last_seen_at:new Date().toISOString()}).eq('id',gudangproSessionId);},45000);
+ }catch(e){console.warn('Session tracking unavailable',e);}
+}
+async function endStaffSession(){if(sessionHeartbeatTimer){clearInterval(sessionHeartbeatTimer);sessionHeartbeatTimer=null;}if(gudangproSessionId){try{await cloud.from('staff_login_sessions').update({ended_at:new Date().toISOString(),last_seen_at:new Date().toISOString()}).eq('id',gudangproSessionId);}catch(e){}gudangproSessionId=null;}}
+async function refreshAdminActivity(){
+ const panel=document.getElementById('adminActivityPanel'),body=document.getElementById('adminActivityBody');if(!panel||!body||!isAdmin())return;panel.style.display='';
+ try{const [sessions,requests]=await Promise.all([cloud.from('staff_login_sessions').select('*').is('ended_at',null).gte('last_seen_at',new Date(Date.now()-120000).toISOString()).order('last_seen_at',{ascending:false}),cloud.from('staff_activation_requests').select('*').eq('status','pending').order('requested_at',{ascending:false})]);
+ if(sessions.error)throw sessions.error;if(requests.error)throw requests.error;
+ body.innerHTML='<h4 style="margin:0 0 8px">Staff aktif ('+sessions.data.length+')</h4>'+ (sessions.data.length?sessions.data.map(x=>'<div class="staff-row"><div><b>'+esc(x.full_name||x.username||'Staff')+'</b><div class="item-sub">Login: '+new Date(x.started_at).toLocaleString('id-ID')+' · Aktif: '+new Date(x.last_seen_at).toLocaleTimeString('id-ID')+'</div></div><span class="badge good">Online</span></div>').join(''):'<div class="item-sub">Tidak ada staff aktif.</div>')+'<h4 style="margin:18px 0 8px">Permintaan aktivasi ('+requests.data.length+')</h4>'+(requests.data.length?requests.data.map(x=>'<div class="staff-row"><div><b>'+esc(x.username)+'</b><div class="item-sub">'+new Date(x.requested_at).toLocaleString('id-ID')+'</div></div><span class="badge warn">Menunggu</span></div>').join(''):'<div class="item-sub">Tidak ada permintaan aktivasi.</div>');
+ }catch(e){body.innerHTML='<div class="notice warn">Panel aktivitas tidak dapat dimuat: '+esc(e.message||'')+'</div>';}
+}
+\nfunction showLogin(message = '') {
   document.getElementById('appRoot').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'grid';
   const m = document.getElementById('loginMessage');
-  if (m) m.textContent = message;
+  if (m) m.textContent = message;\n  showActivationLink(document.getElementById('loginIdentity')?.value||'');
   const signOut = document.getElementById('signOutBtn');
   if (signOut) signOut.style.display = 'none';
 }
@@ -702,7 +725,7 @@ async function bootCloudApp() {
     button.disabled = true; button.textContent = 'Memeriksa akun...'; message.textContent = '';
     const { data, error } = await cloud.auth.signInWithPassword({ email, password });
     button.disabled = false; button.textContent = 'Masuk ke GudangPro';
-    if (error || !data?.user) { message.textContent = 'Login gagal. Periksa email/username dan password.'; return; }
+    if (error || !data?.user) { message.textContent = 'Login gagal. Periksa email/username dan password.'; showActivationLink(identity); return; }
     await openAuthenticatedApp(data.user);
   });
   async function logoutGudangPro(){
