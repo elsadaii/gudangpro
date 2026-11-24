@@ -190,8 +190,8 @@ tbody tr:hover{background:#f7faff}
   <div class="panel"><div class="panel-head"><div><h3>Ringkasan Nilai Stok per Kategori</h3><p>Estimasi nilai persediaan berdasarkan harga modal yang dimasukkan</p></div></div><div class="table-wrap"><table><thead><tr><th>Kategori</th><th>Jumlah SKU</th><th>Total Unit</th><th>Estimasi Nilai</th></tr></thead><tbody id="categoryRows"></tbody></table></div></div>
 </section>
 <section class="section" id="page-database">
-  <div class="page-head"><div><h1>Database</h1><p>Lihat data yang tersimpan di database GudangPro.</p></div><button class="btn" onclick="loadDatabaseTable()">↻ Muat Ulang</button></div>
-  <div class="panel"><div class="toolbar"><div class="field" style="min-width:220px;max-width:360px;flex:1"><label for="databaseTableSelect">Pilih tabel</label><select id="databaseTableSelect" onchange="loadDatabaseTable()"><option value="products">products · Barang</option><option value="inventory_balances">inventory_balances · Saldo Stok</option><option value="stock_movements">stock_movements · Transaksi Stok</option><option value="warehouses">warehouses · Gudang</option><option value="locations">locations · Lokasi Rak</option><option value="stock_opnames">stock_opnames · Stock Opname</option><option value="stock_opname_items">stock_opname_items · Detail Opname</option><option value="profiles">profiles · Akun</option></select></div><div id="databaseCount" class="item-sub">Pilih tabel untuk melihat data.</div></div>
+  <div class="page-head"><div><h1>Database Barang</h1><p>SKU, barcode, nama barang, dan stok saat ini.</p></div><button class="btn" onclick="loadDatabaseTable()">↻ Muat Ulang</button></div>
+  <div class="panel"><div class="toolbar"><div id="databaseCount" class="item-sub">Daftar barang tersimpan.</div></div>
   <div class="table-wrap" style="max-height:65vh;overflow:auto"><table><thead id="databaseHead"></thead><tbody id="databaseRows"><tr><td>Pilih tabel lalu muat data.</td></tr></tbody></table></div>
   <div class="table-foot"><span id="databasePageInfo">Maksimal 50 baris per tampilan.</span><span>Hanya admin yang dapat membuka halaman ini.</span></div></div>
 </section>
@@ -257,26 +257,28 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')setMobileMenu(false)
 
 document.getElementById('topDate').textContent=new Date().toLocaleDateString('id-ID',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 function renderAll(){document.getElementById('demoNotice').style.display=state.demo?'block':'none';renderDashboard();renderProducts();renderTransactions();renderStocktake();renderReports();renderSettings();}
-const GUDANGPRO_DATABASE_TABLES=['products','inventory_balances','stock_movements','warehouses','locations','stock_opnames','stock_opname_items','profiles'];
 async function loadDatabaseTable(){
   if(!isAdmin()){toast('Akses database hanya untuk admin.');return;}
-  const select=document.getElementById('databaseTableSelect');
-  const table=select?.value;
-  if(!GUDANGPRO_DATABASE_TABLES.includes(table))return;
   const head=document.getElementById('databaseHead'),rows=document.getElementById('databaseRows'),count=document.getElementById('databaseCount');
   if(!head||!rows||!count)return;
   count.textContent='Memuat data...';head.innerHTML='';rows.innerHTML='<tr><td>Memuat...</td></tr>';
   try{
-    const {data,error}=await cloud.from(table).select('*').limit(50);
-    if(error)throw error;
-    const records=data||[];
-    if(!records.length){rows.innerHTML='<tr><td>Tidak ada data pada tabel ini.</td></tr>';count.textContent='0 baris';document.getElementById('databasePageInfo').textContent='Maksimal 50 baris per tampilan.';return;}
-    const cols=Object.keys(records[0]);
-    head.innerHTML='<tr>'+cols.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr>';
-    rows.innerHTML=records.map(record=>'<tr>'+cols.map(c=>{let value=record[c];if(value===null||value===undefined)value='—';else if(typeof value==='object')value=JSON.stringify(value);return '<td style="max-width:260px;white-space:normal;overflow-wrap:anywhere">'+esc(String(value))+'</td>';}).join('')+'</tr>').join('');
-    count.textContent=records.length+' baris ditampilkan'+(records.length===50?' (maksimal 50)':'');
-    document.getElementById('databasePageInfo').textContent='Kolom: '+cols.length+' · Urutan data mengikuti database.';
-  }catch(error){head.innerHTML='';rows.innerHTML='<tr><td>Gagal memuat: '+esc(error.message||'Periksa izin akses database.')+'</td></tr>';count.textContent='Tidak dapat dimuat';}
+    const [{data:products,error:productError},{data:balances,error:balanceError}]=await Promise.all([
+      cloud.from('products').select('id,sku,barcode,name').order('name').limit(1000),
+      cloud.from('inventory_balances').select('product_id,quantity').limit(5000)
+    ]);
+    if(productError)throw productError;
+    if(balanceError)throw balanceError;
+    const totals={};
+    (balances||[]).forEach(item=>{totals[item.product_id]=(totals[item.product_id]||0)+Number(item.quantity||0);});
+    const records=products||[];
+    head.innerHTML='<tr><th>SKU</th><th>Barcode</th><th>Nama Barang</th><th>Stok</th></tr>';
+    rows.innerHTML=records.length?records.map(item=>'<tr><td>'+esc(item.sku||'—')+'</td><td>'+esc(item.barcode||'—')+'</td><td>'+esc(item.name||'—')+'</td><td>'+esc(String(totals[item.id]??0))+'</td></tr>').join(''):'<tr><td colspan="4">Belum ada data barang.</td></tr>';
+    count.textContent=records.length+' barang';
+    document.getElementById('databasePageInfo').textContent='Menampilkan SKU, barcode, nama barang, dan total stok seluruh lokasi.';
+  }catch(error){
+    head.innerHTML='';rows.innerHTML='<tr><td>Gagal memuat: '+esc(error.message||'Periksa izin akses database.')+'</td></tr>';count.textContent='Tidak dapat dimuat';
+  }
 }
 function renderDashboard(){const sku=state.products.length,units=state.balances.reduce((a,b)=>a+Number(b.qty||0),0),low=state.products.filter(p=>statusOf(p)!=='ok').length,value=state.products.reduce((a,p)=>a+totalStock(p)*Number(p.cost||0),0);const now=new Date();const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());const ins=state.transactions.filter(t=>(t.type==='in'||t.type==='return')&&new Date(t.date)>=start).reduce((a,t)=>a+t.qty,0);const outs=state.transactions.filter(t=>t.type==='out'&&new Date(t.date)>=start).reduce((a,t)=>a+t.qty,0);
  const cards=[['Total SKU',fmt(sku),'Master barang terdaftar','▤','tint-blue'],['Total Unit Stok',fmt(units),'Akumulasi seluruh lokasi','▦','tint-green'],['Stok Perlu Perhatian',fmt(low),'Habis atau di bawah minimum','!','tint-amber'],['Estimasi Nilai Stok',money(value),'Berdasarkan harga modal','◇','tint-red']];document.getElementById('stats').innerHTML=cards.map(c=>`<div class="stat"><div class="stat-top"><span class="stat-label">${c[0]}</span><span class="stat-icon ${c[4]}">${c[3]}</span></div><div class="stat-value">${c[1]}</div><div class="stat-foot">${c[2]}</div></div>`).join('');
