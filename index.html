@@ -294,7 +294,7 @@ function backupData(){const payload={app:'GudangPro',version:'0.2.0',exportedAt:
 function restoreData(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result),d=obj.data||obj;if(!Array.isArray(d.products)||!Array.isArray(d.balances)||!Array.isArray(d.transactions))throw new Error('Format');if(!confirm('Pulihkan backup? Data saat ini akan diganti.'))return;state=d;save();renderAll();toast('Backup berhasil dipulihkan.');}catch(err){toast('File backup tidak valid.');}e.target.value='';};r.readAsText(file);}
 function clearDemo(){if(!confirm('Hapus seluruh data contoh? Tindakan ini menghapus barang, saldo, transaksi, dan catatan stock opname contoh.'))return;state=defaultState();save();renderAll();toast('Data contoh dihapus. Aplikasi siap diisi.');}
 function resetDemo(){if(!confirm('Muat ulang data contoh? Data yang ada sekarang akan diganti. Buat backup dahulu bila diperlukan.'))return;state=seed();save();renderAll();toast('Data demo dimuat ulang.');}
-let activeBarcodeScanner=null,scanTarget='',scanHandled=false,scannerStream=null,scannerDetector=null,scannerFrame=0,scannerBusy=false,scannerZxingReader=null,scannerZxingControls=null;
+let activeBarcodeScanner=null,scanTarget='',scanHandled=false,scannerStream=null,scannerDetector=null,scannerFrame=0,scannerBusy=false,scannerZxingReader=null,scannerZxingControls=null,scannerCameraLabel='Camera 0',scannerCameraList=[];
 async function openGudangProMainCamera(){
       const baseVideo={
         width:{ideal:1280},
@@ -313,6 +313,7 @@ async function openGudangProMainCamera(){
       try{
         const devices=await navigator.mediaDevices.enumerateDevices();
         const cameras=devices.filter(device=>device.kind==='videoinput');
+        scannerCameraList=cameras.map((device,index)=>({index,label:device.label||'(label disembunyikan)',deviceId:device.deviceId}));
         const backCameras=cameras.filter(device=>{
           const label=(device.label||'').toLowerCase();
           return /back|rear|environment|belakang/.test(label)
@@ -331,6 +332,7 @@ async function openGudangProMainCamera(){
           throw new Error('Kamera belakang utama tidak terdeteksi.');
         }
 
+        scannerCameraLabel=selected.label||'Camera 0 (label tidak tersedia)';
         // Tutup stream sementara sebelum membuka lensa terpilih.
         // Sebagian perangkat Android tidak mengizinkan dua stream kamera bersamaan.
         probe.getTracks().forEach(track=>track.stop());
@@ -354,7 +356,7 @@ async function loadGudangProZXing(){
 }
 async function openScanner(target){
   scanTarget=target;scanHandled=false;scannerBusy=false;
-  const body=`<div class="notice">Pemindai menggunakan metode kamera langsung yang sama dengan Barcode Scanner Excel.</div><div id="scannerRegion" class="scanner-region"><video id="gudangScannerVideo" autoplay muted playsinline style="display:block;width:100%;max-height:420px;object-fit:cover"></video></div><div id="scannerStatus" class="scanner-help">Menyiapkan kamera belakang utama...</div>`;
+  const body=`<div class="notice">Pemindai kamera langsung. Informasi lensa yang dipilih ditampilkan di bawah.</div><div id="scannerRegion" class="scanner-region"><video id="gudangScannerVideo" autoplay muted playsinline style="display:block;width:100%;max-height:420px;object-fit:cover"></video></div><div id="scannerStatus" class="scanner-help">Menyiapkan kamera belakang utama...</div><details style="margin-top:10px;font-size:12px"><summary>Diagnostik kamera</summary><div id="scannerCameraDebug" class="scanner-help">Membaca daftar kamera...</div></details>`;
   openModal('Scan Barcode',body,`<button class="btn" onclick="closeModal()">Tutup</button>`,true);
   try{
     if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia)throw new Error('Kamera hanya dapat digunakan melalui alamat HTTPS.');
@@ -363,9 +365,12 @@ async function openScanner(target){
     scannerStream=await openGudangProMainCamera();
     const video=document.getElementById('gudangScannerVideo');video.srcObject=scannerStream;await video.play();
     const track=scannerStream.getVideoTracks()[0];
+    const settings=track?.getSettings?track.getSettings():{};
+    const debug=document.getElementById('scannerCameraDebug');
+    if(debug)debug.innerHTML='<b>Kamera aktif:</b> '+esc(scannerCameraLabel)+'<br><b>Resolusi:</b> '+(settings.width||'?')+' × '+(settings.height||'?')+'<br><b>Daftar kamera browser:</b><br>'+scannerCameraList.map((d,i)=>(i+1)+'. '+esc(d.label)).join('<br>');
     if(track?.applyConstraints){try{const caps=track.getCapabilities?track.getCapabilities():{};const advanced={};if(Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))advanced.focusMode='continuous';if(Array.isArray(caps.exposureMode)&&caps.exposureMode.includes('continuous'))advanced.exposureMode='continuous';if(Array.isArray(caps.whiteBalanceMode)&&caps.whiteBalanceMode.includes('continuous'))advanced.whiteBalanceMode='continuous';if(caps.zoom&&Number.isFinite(caps.zoom.max)&&caps.zoom.max>caps.zoom.min)advanced.zoom=Math.min(caps.zoom.max,Math.max(caps.zoom.min,1.7));if(Object.keys(advanced).length)await track.applyConstraints({advanced:[advanced]});}catch(e){}}
-    if('BarcodeDetector'in window){let supported=[];try{supported=await BarcodeDetector.getSupportedFormats();}catch(e){}const wanted=['upc_a','upc_e','ean_13','ean_8','code_128','code_39','code_93','itf','codabar','qr_code','data_matrix','pdf417','aztec'];scannerDetector=new BarcodeDetector(supported.length?{formats:wanted.filter(f=>supported.includes(f))}:undefined);status.textContent='Kamera utama aktif: '+camera.label+'. Arahkan barcode ke kamera.';gudangProNativeScanLoop(video);}
-    else{await loadGudangProZXing();scannerZxingReader=new ZXing.BrowserMultiFormatReader();status.textContent='Kamera utama aktif: '+camera.label+'.';scannerZxingControls=await scannerZxingReader.decodeFromVideoElement(video,(result)=>{if(result)handleGudangProScan(result.getText());});}
+    if('BarcodeDetector'in window){let supported=[];try{supported=await BarcodeDetector.getSupportedFormats();}catch(e){}const wanted=['upc_a','upc_e','ean_13','ean_8','code_128','code_39','code_93','itf','codabar','qr_code','data_matrix','pdf417','aztec'];scannerDetector=new BarcodeDetector(supported.length?{formats:wanted.filter(f=>supported.includes(f))}:undefined);status.textContent='Kamera terpilih: '+scannerCameraLabel+'. Arahkan barcode ke kamera.';gudangProNativeScanLoop(video);}
+    else{await loadGudangProZXing();scannerZxingReader=new ZXing.BrowserMultiFormatReader();status.textContent='Kamera terpilih: '+scannerCameraLabel+'.';scannerZxingControls=await scannerZxingReader.decodeFromVideoElement(video,(result)=>{if(result)handleGudangProScan(result.getText());});}
   }catch(err){const status=document.getElementById('scannerStatus');if(status)status.textContent=err?.message||'Tidak dapat membuka kamera. Periksa izin kamera browser.';await stopScanner();}
 }
 function gudangProNativeScanLoop(video){
