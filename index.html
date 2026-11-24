@@ -295,21 +295,59 @@ function restoreData(e){const file=e.target.files[0];if(!file)return;const r=new
 function clearDemo(){if(!confirm('Hapus seluruh data contoh? Tindakan ini menghapus barang, saldo, transaksi, dan catatan stock opname contoh.'))return;state=defaultState();save();renderAll();toast('Data contoh dihapus. Aplikasi siap diisi.');}
 function resetDemo(){if(!confirm('Muat ulang data contoh? Data yang ada sekarang akan diganti. Buat backup dahulu bila diperlukan.'))return;state=seed();save();renderAll();toast('Data demo dimuat ulang.');}
 let activeBarcodeScanner=null,scanTarget='',scanHandled=false,scannerStream=null,scannerDetector=null,scannerFrame=0,scannerBusy=false,scannerZxingReader=null,scannerZxingControls=null;
-async function chooseGudangProMainCamera(){
-  const baseVideo={width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30},focusMode:{ideal:'continuous'}};
-  const probe=await navigator.mediaDevices.getUserMedia({audio:false,video:{...baseVideo,facingMode:{exact:'environment'}}});
-  try{
-    const devices=await navigator.mediaDevices.enumerateDevices();
-    const cameras=devices.filter(device=>device.kind==='videoinput');
-    const backCameras=cameras.filter(device=>{const label=(device.label||'').toLowerCase();return /back|rear|environment|belakang|facing back/.test(label)&&!/ultra.?wide|wide.?angle|tele(photo)?|macro|depth|front|selfie/.test(label);});
-    // Explicitly prefer the physical device exposed by Android as Camera 0.
-    const cameraZero=backCameras.find(device=>{const label=(device.label||'').toLowerCase();return /\\bcamera\\s*0\\b/.test(label)||/^\\s*0\\s*[,(:-]/.test(label)||/\\bcamera2\\s*0\\b/.test(label);});
-    const selected=cameraZero||backCameras[0];
-    if(!selected)throw new Error('Camera 0 tidak terdeteksi sebagai kamera belakang. Pastikan izin kamera aktif.');
-    probe.getTracks().forEach(track=>track.stop());
-    return {id:selected.deviceId,label:'Camera 0'+(selected.label?' · '+selected.label:''),constraints:baseVideo};
-  }catch(error){probe.getTracks().forEach(track=>track.stop());throw error;}
-}
+async function openGudangProMainCamera(){
+      const baseVideo={
+        width:{ideal:1280},
+        height:{ideal:720},
+        frameRate:{ideal:30,max:30},
+        focusMode:{ideal:'continuous'}
+      };
+
+      // Buka kamera belakang sementara agar browser memberikan label lensa,
+      // lalu pilih lensa belakang utama (bukan ultra-wide/tele/macro/depth).
+      const probe=await navigator.mediaDevices.getUserMedia({
+        audio:false,
+        video:{...baseVideo,facingMode:{exact:'environment'}}
+      });
+
+      try{
+        const devices=await navigator.mediaDevices.enumerateDevices();
+        const cameras=devices.filter(device=>device.kind==='videoinput');
+        const backCameras=cameras.filter(device=>{
+          const label=(device.label||'').toLowerCase();
+          return /back|rear|environment|belakang/.test(label)
+            && !/ultra.?wide|wide.?angle|tele(photo)?|macro|depth|front|selfie/.test(label);
+        });
+
+        // Camera 0 pada Android/Samsung adalah prioritas untuk kamera belakang utama.
+        const primaryCamera=backCameras.find(device=>{
+          const label=(device.label||'').toLowerCase();
+          return /camera2?\s*0\b|camera\s*0\b/.test(label)
+            || /\b(main|primary)\b/.test(label);
+        });
+        const selected=primaryCamera||backCameras[0];
+        if(!selected){
+          probe.getTracks().forEach(track=>track.stop());
+          throw new Error('Kamera belakang utama tidak terdeteksi.');
+        }
+
+        // Tutup stream sementara sebelum membuka lensa terpilih.
+        // Sebagian perangkat Android tidak mengizinkan dua stream kamera bersamaan.
+        probe.getTracks().forEach(track=>track.stop());
+
+        try{
+          return await navigator.mediaDevices.getUserMedia({
+            audio:false,
+            video:{...baseVideo,deviceId:{exact:selected.deviceId}}
+          });
+        }catch(selectionError){
+          throw new Error('Tidak dapat membuka kamera utama ('+(selected.label||'Camera 0')+'). '+(selectionError.message||''));
+        }
+      }catch(error){
+        if(probe.active)probe.getTracks().forEach(track=>track.stop());
+        throw error;
+      }
+    }
 async function loadGudangProZXing(){
   if(window.ZXing)return;
   await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';script.onload=resolve;script.onerror=()=>reject(new Error('Pustaka pemindai cadangan gagal dimuat.'));document.head.appendChild(script);});
@@ -320,9 +358,9 @@ async function openScanner(target){
   openModal('Scan Barcode',body,`<button class="btn" onclick="closeModal()">Tutup</button>`,true);
   try{
     if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia)throw new Error('Kamera hanya dapat digunakan melalui alamat HTTPS.');
-    const status=document.getElementById('scannerStatus');const camera=await chooseGudangProMainCamera();
-    status.textContent='Membuka '+camera.label+'...';
-    scannerStream=await navigator.mediaDevices.getUserMedia({audio:false,video:{...camera.constraints,deviceId:{exact:camera.id}}});
+    const status=document.getElementById('scannerStatus');
+    status.textContent='Membuka Camera 0...';
+    scannerStream=await openGudangProMainCamera();
     const video=document.getElementById('gudangScannerVideo');video.srcObject=scannerStream;await video.play();
     const track=scannerStream.getVideoTracks()[0];
     if(track?.applyConstraints){try{const caps=track.getCapabilities?track.getCapabilities():{};const advanced={};if(Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))advanced.focusMode='continuous';if(Array.isArray(caps.exposureMode)&&caps.exposureMode.includes('continuous'))advanced.exposureMode='continuous';if(Array.isArray(caps.whiteBalanceMode)&&caps.whiteBalanceMode.includes('continuous'))advanced.whiteBalanceMode='continuous';if(caps.zoom&&Number.isFinite(caps.zoom.max)&&caps.zoom.max>caps.zoom.min)advanced.zoom=Math.min(caps.zoom.max,Math.max(caps.zoom.min,1.7));if(Object.keys(advanced).length)await track.applyConstraints({advanced:[advanced]});}catch(e){}}
