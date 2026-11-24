@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gudangpro-shell-v0.4.5';
+const CACHE_NAME = 'gudangpro-shell-v0.4.7';
 const APP_SHELL = ['./', './index.html'];
 const REMOTE_ASSETS = [
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
