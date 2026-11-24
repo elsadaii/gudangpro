@@ -420,7 +420,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.3.5';
+const GUDANGPRO_APP_VERSION = '0.3.6';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -715,7 +715,7 @@ async function openAuthenticatedApp(user) {
   }
 }
 async function bootCloudApp() {
-  showLogin('Siap untuk login. Masukkan akun dan password.');
+  showLogin('');
   // Background connection check: login stays available even if this check is slow.
   cloud.from('profiles').select('id').limit(1).then(({error}) => {
     if (error) { console.warn('GudangPro connection check:', error); setConnectionState('offline', 'Database tidak dapat dijangkau'); }
