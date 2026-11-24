@@ -148,13 +148,14 @@ tbody tr:hover{background:#f7faff}
 <div class="content">
 <section class="section active" id="page-dashboard">
   <div class="page-head"><div><h1>Dashboard Gudang</h1><p>Ringkasan persediaan dan aktivitas gudang hari ini.</p></div><div class="actions"><button class="btn" onclick="navigate('transactions');setTimeout(()=>openTransaction('in'),50)">＋ Barang Masuk</button><button class="btn primary" onclick="navigate('transactions');setTimeout(()=>openTransaction('out'),50)">↗ Barang Keluar</button></div></div>
+  <div id="adminActivityPanel" class="panel" style="display:none;margin:0 0 16px"><div class="panel-head"><div><h3>Notifikasi & Sesi Staff</h3><p>Permintaan aktivasi dan sesi aktif staff</p></div><button class="btn small" onclick="refreshAdminActivity()">Refresh</button></div><div class="panel-body" id="adminActivityBody">Memuat...</div></div>
   <div id="demoNotice" class="notice warn" style="display:none">Anda sedang melihat <b>data contoh (DEMO)</b>, bukan stok gudang sebenarnya. Hapus data contoh di menu Pengaturan setelah siap memasukkan data Anda.</div>
   <div class="grid stats" id="stats"></div>
   <div class="grid two-col">
     <div class="panel"><div class="panel-head"><div><h3>Aktivitas Stok</h3><p>Barang masuk dan keluar dalam 7 hari terakhir</p></div><div class="legend"><span><i></i>Masuk</span><span><i class="alt"></i>Keluar</span></div></div><div class="panel-body"><div class="chart" id="activityChart"></div></div></div>
     <div class="panel"><div class="panel-head"><div><h3>Perlu Perhatian</h3><p>Barang yang mencapai batas stok minimum</p></div><button class="btn small soft" onclick="navigate('reports')">Lihat semua →</button></div><div class="panel-body"><div class="low-list" id="lowList"></div></div></div>
   </div>
-  <div id="adminActivityPanel" class="panel" style="display:none;margin-bottom:16px"><div class="panel-head"><div><h3>Notifikasi & Sesi Staff</h3><p>Permintaan aktivasi dan sesi aktif staff</p></div><button class="btn small" onclick="refreshAdminActivity()">Refresh</button></div><div class="panel-body" id="adminActivityBody">Memuat...</div></div><div class="panel"><div class="panel-head"><div><h3>Transaksi Terbaru</h3><p>Catatan aktivitas persediaan terakhir</p></div><button class="btn small" onclick="navigate('transactions')">Semua transaksi →</button></div><div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Barang</th><th>Jenis</th><th>Qty</th><th>Lokasi</th><th>Petugas</th></tr></thead><tbody id="recentTransactions"></tbody></table></div></div>
+  <div class="panel"><div class="panel-head"><div><h3>Transaksi Terbaru</h3><div class="panel"><div class="panel-head"><div><h3>Transaksi Terbaru</h3><p>Catatan aktivitas persediaan terakhir</p></div><button class="btn small" onclick="navigate('transactions')">Semua transaksi →</button></div><div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Barang</th><th>Jenis</th><th>Qty</th><th>Lokasi</th><th>Petugas</th></tr></thead><tbody id="recentTransactions"></tbody></table></div></div>
 </section>
 <section class="section" id="page-products">
   <div class="page-head"><div><h1>Data Barang</h1><p>Kelola master barang, barcode, lokasi, dan batas stok minimum.</p></div><div class="actions"><button class="btn" onclick="downloadTemplate()">↓ Template</button><button class="btn" onclick="document.getElementById('importFile').click()">↑ Import Excel</button><button class="btn primary" onclick="openProduct()">＋ Tambah Barang</button><input id="importFile" type="file" accept=".xlsx,.xls,.csv" hidden onchange="importProducts(event)"></div></div>
@@ -420,7 +421,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.3.7';
+const GUDANGPRO_APP_VERSION = '0.3.8';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -508,6 +509,8 @@ function profileHeading() {
   if (versionInfo) versionInfo.textContent = GUDANGPRO_APP_VERSION;
 }
 function applyRoleUI() {
+  const activityPanel = document.getElementById('adminActivityPanel');
+  if (activityPanel) activityPanel.style.display = isAdmin() ? 'block' : 'none';
   const databaseNav = document.querySelector('#databaseNav');
   const databasePage = document.querySelector('#page-database');
   if (databaseNav) databaseNav.style.display = isAdmin() ? '' : 'none';
@@ -709,8 +712,8 @@ async function openAuthenticatedApp(user) {
     await loadCloudData(false);
     startRealtime();
     applyRoleUI();
-    if (isAdmin()) refreshAdminActivity();
     navigate('dashboard');
+    if (isAdmin()) refreshAdminActivity();
   } catch (error) {
     applyRoleUI();
     navigate('dashboard');
