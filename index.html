@@ -526,12 +526,18 @@ async function openAuthenticatedApp(user) {
     return;
   }
   showApp();
+  // Always land on the Dashboard after login (including Staff accounts).
+  // This prevents a hidden/previous page from leaving the content area blank.
+  navigate('dashboard');
   profileHeading();
   try {
     await loadCloudData(false);
     startRealtime();
     applyRoleUI();
+    navigate('dashboard');
   } catch (error) {
+    applyRoleUI();
+    navigate('dashboard');
     toast(error.message || 'Koneksi database gagal.');
   }
 }
