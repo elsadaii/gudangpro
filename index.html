@@ -11,10 +11,26 @@
 .tx-stock-overview{border:1px solid #dfe8f6;background:linear-gradient(135deg,#f8fbff,#f1f6ff);border-radius:12px;padding:13px}.tx-stock-title{font-size:11px;font-weight:800;color:#34445b;margin-bottom:10px;display:flex;align-items:center;gap:7px}.tx-stock-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.tx-stock-card{background:#fff;border:1px solid #e7edf6;border-radius:9px;padding:10px;min-width:0}.tx-stock-card small{display:block;color:#7b899b;font-size:10px;line-height:1.35;min-height:26px}.tx-stock-card strong{display:block;color:#25364d;font-size:17px;margin-top:4px;overflow-wrap:anywhere}.tx-stock-card em{font-style:normal;font-size:10px;color:#8290a0}.tx-stock-card.projected{border-color:#cddafc;background:#fafdff}.tx-stock-message{font-size:10px;line-height:1.5;margin-top:9px;color:#61728a}.tx-stock-message.warn{color:#b45309}.tx-stock-message.good{color:#15805f}@media(max-width:760px){.tx-stock-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tx-stock-card strong{font-size:16px}}
 @media(max-width:1100px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.two-col{grid-template-columns:1fr}.content{padding:25px 22px}}
 @media(max-width:760px){.search-with-scan{width:100%;max-width:none}.search-with-scan .search{min-width:0}.scan-search-btn{padding:10px 11px}.sidebar{transform:translateX(-100%);transition:.22s}.sidebar.open{transform:translateX(0)}.main{margin-left:0}.menu-toggle{display:block}.topbar{padding:0 16px;height:64px}.top-date{display:none}.content{padding:22px 14px 36px}.page-head{flex-direction:column}.page-head h1{font-size:22px}.stats{gap:10px}.stat{padding:15px}.stat-value{font-size:22px}.two-col{gap:12px}.panel-head,.panel-body{padding:15px}.toolbar{align-items:stretch}.search{max-width:none;min-width:100%}.report-cards{grid-template-columns:1fr}.settings-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.status-pill{padding:7px 9px}.top-actions{gap:8px}}
+
+#appRoot{display:none}#loginScreen{min-height:100vh;display:grid;place-items:center;padding:22px;background:radial-gradient(circle at 15% 10%,#284d79 0,#152943 35%,#101b2b 75%)}.login-card{width:min(430px,100%);padding:30px;background:#fff;border-radius:22px;box-shadow:0 26px 80px #06152c66}.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}.login-brand .brand-mark{flex:none}.login-card h1{margin:0;font-size:22px;color:#17263a}.login-card p{margin:6px 0 20px;color:#718096;font-size:12px;line-height:1.6}.login-card .field{margin-bottom:13px}.login-card .field input{padding:12px}.login-card .btn{width:100%;justify-content:center;padding:12px}.login-help{font-size:10px;color:#8693a4;line-height:1.55;margin-top:14px}.login-message{font-size:12px;color:#bd4050;min-height:18px;margin:4px 0 10px}.staff-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}.staff-row:last-child{border-bottom:0}.staff-row b{font-size:12px}.staff-row .item-sub{font-size:10px}.status-pill{white-space:nowrap}.top-actions{gap:9px}
+
 </style>
 </head>
 <body>
-<div class="app">
+<div id="loginScreen" style="display:grid">
+  <div class="login-card">
+    <div class="login-brand"><div class="brand-mark">G</div><div><h1>GudangPro</h1><div style="font-size:10px;color:#8290a3;letter-spacing:1.3px;text-transform:uppercase">Inventory system</div></div></div>
+    <p>Masuk ke sistem stok gudang. Admin menggunakan email, staff menggunakan username.</p>
+    <form id="loginForm">
+      <div class="field"><label>Email Admin / Username Staff</label><input id="loginIdentity" autocomplete="username" required placeholder="Email admin atau username staff"></div>
+      <div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Masukkan password"></div>
+      <div id="loginMessage" class="login-message">Memeriksa koneksi database...</div>
+      <button id="loginSubmit" class="btn primary" type="submit">Masuk ke GudangPro</button>
+    </form>
+    <div class="login-help">Akun staff dibuat oleh Admin. Staff tidak perlu memiliki email. Jangan bagikan password kepada orang lain.</div>
+  </div>
+</div>
+<div class="app" id="appRoot">
 <aside class="sidebar" id="sidebar">
   <div class="brand"><div class="brand-mark">G</div><div><strong>GudangPro</strong><small>Inventory system</small></div></div>
   <div class="nav-label">Workspace</div>
@@ -27,10 +43,10 @@
   </nav>
   <div class="nav-label" style="margin-top:18px">System</div>
   <nav class="nav"><button data-page="settings"><span class="ico">⚙</span>Pengaturan & Backup</button></nav>
-  <div class="side-bottom"><div class="side-user"><div class="avatar">A</div><div><b>Administrator</b><div style="color:#8fa0b5;font-size:10px">Mode perangkat lokal</div></div></div>GudangPro Starter · v0.1.3<br>Data tersimpan di browser perangkat ini</div>
+  <div class="side-bottom"><div class="side-user"><div class="avatar">A</div><div><b>Administrator</b><div style="color:#8fa0b5;font-size:10px">Database cloud</div></div></div>GudangPro · v0.2.0<br>Data tersimpan online</div>
 </aside>
 <main class="main">
-<header class="topbar"><div style="display:flex;align-items:center;gap:13px"><button class="menu-toggle" id="menuToggle">☰</button><div class="crumb">GudangPro <strong id="crumbTitle">Dashboard</strong></div></div><div class="top-actions"><div class="top-date" id="topDate"></div><div class="status-pill"><i class="dot"></i> Penyimpanan lokal aktif</div></div></header>
+<header class="topbar"><div style="display:flex;align-items:center;gap:13px"><button class="menu-toggle" id="menuToggle">☰</button><div class="crumb">GudangPro <strong id="crumbTitle">Dashboard</strong></div></div><div class="top-actions"><div class="top-date" id="topDate"></div><div class="status-pill" id="connectionStatus"><i class="dot" id="connectionDot"></i><span id="connectionLabel">Menghubungkan database...</span></div><button class="btn small" id="signOutBtn" type="button" style="display:none">Keluar</button></div></header>
 <div class="content">
 <section class="section active" id="page-dashboard">
   <div class="page-head"><div><h1>Dashboard Gudang</h1><p>Ringkasan persediaan dan aktivitas gudang hari ini.</p></div><div class="actions"><button class="btn" onclick="navigate('transactions');setTimeout(()=>openTransaction('in'),50)">＋ Barang Masuk</button><button class="btn primary" onclick="navigate('transactions');setTimeout(()=>openTransaction('out'),50)">↗ Barang Keluar</button></div></div>
@@ -77,17 +93,19 @@
 </section>
 <section class="section" id="page-settings">
   <div class="page-head"><div><h1>Pengaturan & Backup</h1><p>Kelola lokasi gudang serta cadangkan dan pulihkan data aplikasi.</p></div></div>
-  <div class="notice warn"><b>Catatan versi awal:</b> data tersimpan di browser perangkat ini. Belum ada sinkronisasi cloud atau login multi-user. Jangan hapus data browser sebelum membuat backup.</div>
+  <div class="notice success"><b>Database cloud:</b> data aplikasi tersimpan online dan disinkronkan antarperangkat.</div>
   <div class="settings-grid">
+    <div class="panel" id="staffAdminPanel" style="display:none"><div class="panel-head"><div><h3>Akun Staff Gudang</h3><p>Buat username dan password untuk petugas gudang.</p></div><button class="btn primary small" onclick="openStaffForm()">＋ Tambah Staff</button></div><div class="panel-body"><div id="staffList"><div class="item-sub">Daftar akun staff akan dimuat.</div></div></div></div>
     <div class="panel"><div class="panel-head"><div><h3>Lokasi Gudang</h3><p>Daftar lokasi yang bisa dipilih saat transaksi.</p></div></div><div class="panel-body"><div id="warehouseTags" class="warehouse-tags" style="margin-bottom:15px"></div><div class="field"><label>Tambah nama gudang</label><div style="display:flex;gap:8px"><input id="newWarehouse" placeholder="Contoh: Gudang Cabang 2"><button class="btn primary" onclick="addWarehouse()">Tambah</button></div></div></div></div>
     <div class="panel"><div class="panel-head"><div><h3>Backup & Pemulihan</h3><p>Simpan salinan data atau pulihkan dari file backup.</p></div></div><div class="panel-body"><p style="font-size:12px;color:#738196;line-height:1.7;margin-top:0">Backup mencakup master barang, saldo di setiap lokasi, transaksi, stock opname, dan daftar gudang.</p><div class="actions" style="margin-bottom:15px"><button class="btn primary" onclick="backupData()">↓ Download Backup</button><button class="btn" onclick="document.getElementById('restoreFile').click()">↑ Pulihkan Backup</button><input id="restoreFile" type="file" accept=".json" hidden onchange="restoreData(event)"></div><div class="notice success" style="margin:0">Disarankan membuat backup secara berkala, terutama sebelum mengimpor banyak data.</div></div></div>
     <div class="panel"><div class="panel-head"><div><h3>Data Contoh</h3><p>Kelola data demo untuk mencoba aplikasi.</p></div></div><div class="panel-body"><p style="font-size:12px;color:#738196;line-height:1.7;margin-top:0">Versi awal dilengkapi data contoh agar alur dashboard dan transaksi dapat dicoba. Data ini bukan data gudang sebenarnya.</p><div class="actions"><button class="btn danger" onclick="clearDemo()">Hapus Data Contoh</button><button class="btn" onclick="resetDemo()">Muat Ulang Demo</button></div></div></div>
-    <div class="panel"><div class="panel-head"><div><h3>Informasi Aplikasi</h3><p>Versi dan status penyimpanan.</p></div></div><div class="panel-body" style="font-size:12px;line-height:2;color:#728095"><div><b style="color:#344256">Nama:</b> GudangPro Starter</div><div><b style="color:#344256">Versi:</b> 0.1.3</div><div><b style="color:#344256">Penyimpanan:</b> Browser (localStorage)</div><div><b style="color:#344256">Koneksi database:</b> Belum terhubung</div><div><b style="color:#344256">Akses:</b> Perangkat ini saja</div></div></div>
+    <div class="panel"><div class="panel-head"><div><h3>Informasi Aplikasi</h3><p>Versi dan status penyimpanan.</p></div></div><div class="panel-body" style="font-size:12px;line-height:2;color:#728095"><div><b style="color:#344256">Nama:</b> GudangPro Starter</div><div><b style="color:#344256">Versi:</b> 0.2.0</div><div><b style="color:#344256">Penyimpanan:</b> Browser (localStorage)</div><div><b style="color:#344256">Koneksi database:</b> Belum terhubung</div><div><b style="color:#344256">Akses:</b> Perangkat ini saja</div></div></div>
   </div>
 </section>
 </div></main></div>
 <div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"><div class="modal-head"><h2 id="modalTitle">Form</h2><button class="close" onclick="closeModal()">×</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
 <div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2"></script>
 <script>
 const KEY='gudangpro_starter_v1';
 const today=()=>new Date().toISOString();
@@ -164,12 +182,553 @@ function exportRows(rows,name){if(!rows.length){toast('Tidak ada data untuk diek
 function downloadTemplate(){const rows=[{SKU:'BRG-0001',Barcode:'8991234567890',Nama:'Contoh Nama Barang',Kategori:'Elektronik',Satuan:'pcs',Stok:10,Minimum:3,Harga_Modal:25000,Supplier:'Nama Supplier',Gudang:'Gudang Utama',Lokasi:'A-01-01'}];exportRows(rows,'template-import-barang');}
 function importProducts(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{let rows;if(window.XLSX){const wb=XLSX.read(ev.target.result,{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});}else{const txt=new TextDecoder().decode(ev.target.result);rows=parseCSV(txt);}let count=0;rows.forEach(r=>{const norm={};Object.keys(r).forEach(k=>norm[k.toLowerCase().replace(/[ _-]/g,'')]=r[k]);const sku=String(norm.sku||norm.kode||'').trim(),name=String(norm.nama||norm.namabarang||norm.name||'').trim();if(!sku||!name)return;let p=state.products.find(x=>x.sku.toLowerCase()===sku.toLowerCase());const val=(...keys)=>{for(const k of keys)if(norm[k]!==undefined&&norm[k]!=='')return norm[k];return ''};if(p){p.name=name;p.barcode=String(val('barcode','upc')||p.barcode);p.category=String(val('kategori','category')||p.category);p.unit=String(val('satuan','unit')||p.unit);p.minStock=Number(val('minimum','stokminimum','minstock')||p.minStock);p.cost=Number(val('hargamodal','cost')||p.cost);p.supplier=String(val('supplier')||p.supplier);}else{p={id:uid(),sku,barcode:String(val('barcode','upc')),name,category:String(val('kategori','category')),unit:String(val('satuan','unit')||'pcs'),minStock:Number(val('minimum','stokminimum','minstock')||0),cost:Number(val('hargamodal','cost')||0),supplier:String(val('supplier')),createdAt:today()};state.products.push(p);}const qty=val('stok','stock','jumlah');if(qty!==''){const wh=String(val('gudang','warehouse')||state.warehouses[0]||'Gudang Utama'),loc=String(val('lokasi','location')||'-');if(!state.warehouses.includes(wh))state.warehouses.push(wh);let b=state.balances.find(x=>x.productId===p.id&&x.warehouse===wh&&x.location===loc);if(b)b.qty=Number(qty);else state.balances.push({id:uid(),productId:p.id,warehouse:wh,location:loc,qty:Number(qty)});}count++;});save();renderAll();toast(`${count} baris barang berhasil diproses.`);}catch(err){console.error(err);toast('File gagal dibaca. Periksa format template.');}e.target.value='';};reader.readAsArrayBuffer(file);}
 function parseCSV(txt){const lines=txt.replace(/^\ufeff/,'').split(/\r?\n/).filter(Boolean);if(!lines.length)return[];const parse=line=>{const out=[];let v='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'&&line[i+1]==='"'){v+='"';i++;}else if(c==='"')q=!q;else if(c===','&&!q){out.push(v);v='';}else v+=c;}out.push(v);return out;};const h=parse(lines[0]);return lines.slice(1).map(l=>{const a=parse(l),o={};h.forEach((k,i)=>o[k]=a[i]??'');return o;});}
-function backupData(){const payload={app:'GudangPro Starter',version:'0.1.3',exportedAt:today(),data:state};downloadBlob(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'backup-gudangpro-'+new Date().toISOString().slice(0,10)+'.json');toast('Backup berhasil dibuat.');}
+function backupData(){const payload={app:'GudangPro',version:'0.2.0',exportedAt:today(),data:state};downloadBlob(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'backup-gudangpro-'+new Date().toISOString().slice(0,10)+'.json');toast('Backup berhasil dibuat.');}
 function restoreData(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result),d=obj.data||obj;if(!Array.isArray(d.products)||!Array.isArray(d.balances)||!Array.isArray(d.transactions))throw new Error('Format');if(!confirm('Pulihkan backup? Data saat ini akan diganti.'))return;state=d;save();renderAll();toast('Backup berhasil dipulihkan.');}catch(err){toast('File backup tidak valid.');}e.target.value='';};r.readAsText(file);}
 function clearDemo(){if(!confirm('Hapus seluruh data contoh? Tindakan ini menghapus barang, saldo, transaksi, dan catatan stock opname contoh.'))return;state=defaultState();save();renderAll();toast('Data contoh dihapus. Aplikasi siap diisi.');}
 function resetDemo(){if(!confirm('Muat ulang data contoh? Data yang ada sekarang akan diganti. Buat backup dahulu bila diperlukan.'))return;state=seed();save();renderAll();toast('Data demo dimuat ulang.');}
 let activeBarcodeScanner=null,scanTarget='',scanHandled=false;async function openScanner(target){scanTarget=target;scanHandled=false;const body=`<div class="notice">Arahkan barcode barang ke dalam kotak kamera. Pemindaian mendukung barcode EAN/UPC, Code 128, Code 39, ITF, dan QR. Kamera memerlukan izin browser serta koneksi HTTPS atau localhost.</div><div id="scannerRegion" class="scanner-region"></div><div id="scannerStatus" class="scanner-help">Menyiapkan pemindai kamera...</div>`;openModal('Scan Barcode',body,`<button class="btn" onclick="closeModal()">Tutup</button>`,true);try{if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia){throw new Error('secure');}if(typeof Html5Qrcode==='undefined'||typeof Html5QrcodeSupportedFormats==='undefined'){throw new Error('library');}const formats=[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,Html5QrcodeSupportedFormats.ITF,Html5QrcodeSupportedFormats.QR_CODE];activeBarcodeScanner=new Html5Qrcode('scannerRegion',{formatsToSupport:formats,verbose:false,useBarCodeDetectorIfSupported:false});const status=document.getElementById('scannerStatus');if(status)status.textContent='Meminta izin kamera...';await activeBarcodeScanner.start({facingMode:'environment'},{fps:10,qrbox:(w,h)=>({width:Math.max(180,Math.floor(Math.min(w*.9,420))),height:Math.max(90,Math.floor(Math.min(h*.34,150)))})},async(decodedText)=>{if(scanHandled)return;scanHandled=true;const value=String(decodedText||'').trim();await stopScanner();document.getElementById('modalBackdrop').classList.remove('show');const targetEl=document.getElementById(scanTarget);if(targetEl){targetEl.value=value;targetEl.dispatchEvent(new Event('input',{bubbles:true}));targetEl.focus();}toast('Barcode terbaca: '+value);},()=>{});if(status)status.textContent='Kamera aktif — arahkan barcode ke dalam kotak.';}catch(err){const el=document.getElementById('scannerStatus');if(el){if(err?.message==='secure')el.textContent='Kamera tidak tersedia pada file yang dibuka langsung. Jalankan aplikasi melalui alamat HTTPS (misalnya GitHub Pages), lalu izinkan akses kamera.';else if(err?.message==='library')el.textContent='Mesin pemindai belum berhasil dimuat. Periksa koneksi internet, lalu tutup dan coba lagi.';else el.textContent='Kamera tidak dapat diakses. Pastikan kamera tidak sedang dipakai aplikasi lain dan izinkan akses kamera pada browser.';}await stopScanner();}}
 async function stopScanner(){const scanner=activeBarcodeScanner;activeBarcodeScanner=null;if(scanner){try{await scanner.stop();}catch(e){}try{scanner.clear();}catch(e){}}}
 renderAll();
+
+// GudangPro cloud layer — v0.2.0
+const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
+const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
+const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  realtime: { params: { eventsPerSecond: 10 } }
+});
+let currentUser = null;
+let currentProfile = null;
+let realtimeChannel = null;
+let cloudLoading = false;
+let realtimeIsOnline = false;
+const isAdmin = () => currentProfile?.role === 'admin' && currentProfile?.is_active === true;
+const currentOperatorName = () => currentProfile?.full_name || currentProfile?.username || currentUser?.email || 'Pengguna';
+const staffEmailFromUsername = username => `${String(username || '').trim().toLowerCase()}@staff.gudangpro.invalid`;
+
+function setConnectionState(mode, label) {
+  const pill = document.getElementById('connectionStatus');
+  const dot = document.getElementById('connectionDot');
+  const text = document.getElementById('connectionLabel');
+  if (text) text.textContent = label;
+  if (!pill || !dot) return;
+  pill.style.borderColor = mode === 'online' ? '#dcefe8' : mode === 'offline' ? '#f3d9dd' : '#f3e7ce';
+  pill.style.background = mode === 'online' ? '#f2fbf7' : mode === 'offline' ? '#fff5f6' : '#fffaf0';
+  pill.style.color = mode === 'online' ? '#16825f' : mode === 'offline' ? '#bd4050' : '#a87318';
+  dot.style.background = mode === 'online' ? '#19aa7d' : mode === 'offline' ? '#d94c5c' : '#d58b20';
+}
+function showLogin(message = '') {
+  document.getElementById('appRoot').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'grid';
+  const m = document.getElementById('loginMessage');
+  if (m) m.textContent = message;
+  const signOut = document.getElementById('signOutBtn');
+  if (signOut) signOut.style.display = 'none';
+}
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'block';
+  const signOut = document.getElementById('signOutBtn');
+  if (signOut) signOut.style.display = 'inline-flex';
+}
+function profileHeading() {
+  const el = document.querySelector('.side-user');
+  if (!el || !currentProfile) return;
+  const name = esc(currentOperatorName());
+  const role = isAdmin() ? 'Administrator' : 'Staff Gudang';
+  el.innerHTML = `<div class="avatar">${isAdmin() ? 'A' : 'S'}</div><div><b>${name}</b><div style="color:#8fa0b5;font-size:10px">${role}</div></div>`;
+  const bottom = document.querySelector('.side-bottom');
+  if (bottom) {
+    const old = bottom.querySelector('.gudangpro-footnote');
+    if (old) old.remove();
+    const note = document.createElement('div');
+    note.className = 'gudangpro-footnote';
+    note.style.marginTop = '9px';
+    note.textContent = 'GudangPro v0.2.0 · Database cloud';
+    bottom.appendChild(note);
+  }
+}
+function applyRoleUI() {
+  const settingsNav = document.querySelector('#page-settings');
+  const settingsButton = document.querySelector('[data-page="settings"]');
+  const reportsNav = document.querySelector('[data-page="reports"]');
+  if (settingsNav) settingsNav.style.display = isAdmin() ? '' : 'none';
+  if (settingsButton) settingsButton.style.display = isAdmin() ? '' : 'none';
+  if (reportsNav) reportsNav.style.display = isAdmin() ? '' : 'none';
+  const productHeadActions = document.querySelector('#page-products .page-head .actions');
+  if (productHeadActions) productHeadActions.style.display = isAdmin() ? '' : 'none';
+  document.querySelectorAll('#page-products table th:last-child, #page-products table td:last-child').forEach(x => x.style.display = isAdmin() ? '' : 'none');
+  const demoPanel = [...document.querySelectorAll('#page-settings .panel')].find(x => x.textContent.includes('Data Contoh'));
+  if (demoPanel) demoPanel.style.display = 'none';
+  const note = document.querySelector('#page-settings > .notice');
+  if (note) {
+    note.className = 'notice success';
+    note.innerHTML = '<b>Database online:</b> data barang, saldo, transaksi, dan stock opname tersimpan di Supabase GudangPro dan disinkronkan antarperangkat.';
+  }
+  const info = document.querySelector('#page-settings .settings-grid .panel:last-child .panel-body');
+  if (info) info.innerHTML = `<div><b style="color:#344256">Nama:</b> GudangPro</div><div><b style="color:#344256">Versi:</b> 0.2.0</div><div><b style="color:#344256">Penyimpanan:</b> Supabase cloud</div><div><b style="color:#344256">Database:</b> ${GUDANGPRO_SB_URL}</div><div><b style="color:#344256">Akses:</b> ${isAdmin() ? 'Admin' : 'Staff Gudang'}</div><div><b style="color:#344256">Sinkronisasi:</b> ${realtimeIsOnline ? 'Realtime aktif' : 'Database online'}</div>`;
+  profileHeading();
+}
+
+async function getActiveProfile(user) {
+  const { data, error } = await cloud.from('profiles')
+    .select('id, full_name, role, username, is_active')
+    .eq('id', user.id)
+    .single();
+  if (error) throw error;
+  if (!data || data.is_active !== true || !['admin', 'staff'].includes(data.role)) {
+    throw new Error('Akun ini tidak aktif atau tidak memiliki akses GudangPro. Hubungi admin.');
+  }
+  return data;
+}
+async function ensureWarehouse(name) {
+  const clean = String(name || 'Gudang Utama').trim() || 'Gudang Utama';
+  const { data: found, error: findError } = await cloud.from('warehouses')
+    .select('id, code, name')
+    .eq('name', clean)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (findError) throw findError;
+  if (found) return found;
+  if (!isAdmin()) throw new Error(`Gudang "${clean}" belum terdaftar. Hubungi admin.`);
+  const codeBase = clean.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 20) || 'GUDANG';
+  const { data, error } = await cloud.from('warehouses')
+    .insert({ code: `${codeBase}-${Date.now().toString().slice(-5)}`, name: clean, is_active: true })
+    .select('id, code, name')
+    .single();
+  if (error) throw error;
+  return data;
+}
+async function getLocationId(warehouseId, locationName) {
+  const name = String(locationName || '').trim();
+  if (!name || name === '-') return null;
+  const { data: found, error: findError } = await cloud.from('locations')
+    .select('id')
+    .eq('warehouse_id', warehouseId)
+    .eq('code', name)
+    .maybeSingle();
+  if (findError) throw findError;
+  if (found) return found.id;
+  const { data, error } = await cloud.from('locations')
+    .insert({ warehouse_id: warehouseId, code: name, name })
+    .select('id')
+    .single();
+  if (error) {
+    if (error.code === '23505') {
+      const retry = await cloud.from('locations').select('id').eq('warehouse_id', warehouseId).eq('code', name).single();
+      if (!retry.error) return retry.data.id;
+    }
+    throw error;
+  }
+  return data.id;
+}
+function nestedName(x) {
+  if (Array.isArray(x)) return x[0]?.name || '';
+  return x?.name || '';
+}
+async function loadCloudData(quiet = false) {
+  if (!currentUser || cloudLoading) return;
+  cloudLoading = true;
+  if (!quiet) setConnectionState('pending', 'Memuat data cloud...');
+  try {
+    const [whRes, productRes, balanceRes, movementRes, opnameRes, itemRes] = await Promise.all([
+      cloud.from('warehouses').select('id, code, name, address, is_active').eq('is_active', true).order('name').limit(1000),
+      cloud.from('products').select('id, sku, barcode, name, category, unit, min_stock, cost, supplier, created_at, is_active').eq('is_active', true).order('name').limit(5000),
+      cloud.from('inventory_balances').select('id, product_id, warehouse_id, location_id, quantity, updated_at, warehouses(name), locations(name)').order('updated_at', { ascending: false }).limit(5000),
+      cloud.from('stock_movements').select('id, product_id, warehouse_id, location_id, movement_type, quantity_delta, reference_no, notes, created_by_name, created_at, products(name, sku, unit), warehouses(name), locations(name)').order('created_at', { ascending: false }).limit(5000),
+      cloud.from('stock_opnames').select('id, opname_no, warehouse_id, notes, created_by_name, created_at, warehouses(name)').order('created_at', { ascending: false }).limit(2000),
+      cloud.from('stock_opname_items').select('id, opname_id, product_id, location_id, system_quantity, counted_quantity, notes, products(name, sku, unit), locations(name)').limit(5000)
+    ]);
+    for (const r of [whRes, productRes, balanceRes, movementRes, opnameRes, itemRes]) if (r.error) throw r.error;
+
+    if ((!whRes.data || !whRes.data.length) && isAdmin()) {
+      await ensureWarehouse('Gudang Utama');
+      cloudLoading = false;
+      return await loadCloudData(quiet);
+    }
+
+    const warehouses = whRes.data || [];
+    const whById = new Map(warehouses.map(w => [w.id, w]));
+    const products = (productRes.data || []).map(p => ({
+      id: p.id, sku: p.sku || '', barcode: p.barcode || '', name: p.name || '',
+      category: p.category || '', unit: p.unit || 'pcs', minStock: Number(p.min_stock || 0),
+      cost: Number(p.cost || 0), supplier: p.supplier || '', createdAt: p.created_at
+    }));
+    const balances = (balanceRes.data || []).map(b => ({
+      id: b.id, productId: b.product_id, warehouseId: b.warehouse_id, locationId: b.location_id,
+      warehouse: nestedName(b.warehouses), location: nestedName(b.locations) || '-', qty: Number(b.quantity || 0)
+    }));
+
+    const tx = [];
+    const transfers = new Map();
+    for (const m of (movementRes.data || [])) {
+      const common = {
+        id: m.id, productId: m.product_id, sku: m.products?.sku || '', name: m.products?.name || 'Barang',
+        date: m.created_at, qty: Math.abs(Number(m.quantity_delta || 0)),
+        warehouse: nestedName(m.warehouses), location: nestedName(m.locations) || '-',
+        note: m.notes || '', user: m.created_by_name || 'Petugas', code: m.reference_no || `TRX-${String(m.id).slice(0, 8)}`
+      };
+      if (m.movement_type === 'transfer_in' || m.movement_type === 'transfer_out') {
+        const key = m.reference_no || m.id;
+        const group = transfers.get(key) || { type: 'move', qty: common.qty, date: common.date, user: common.user, note: common.note, code: common.code };
+        if (m.movement_type === 'transfer_out') group.from = `${common.warehouse} / ${common.location}`;
+        else { group.to = `${common.warehouse} / ${common.location}`; group.warehouse = common.warehouse; group.location = common.location; }
+        transfers.set(key, group);
+      } else {
+        const map = m.movement_type === 'adjustment' ? 'adjust' : m.movement_type;
+        tx.push({ ...common, type: map });
+      }
+    }
+    for (const [key, t] of transfers.entries()) tx.push({ id: key, ...t, from: t.from || '-', to: t.to || '-' });
+    tx.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const opnameById = new Map((opnameRes.data || []).map(o => [o.id, o]));
+    const stocktakes = (itemRes.data || []).map(i => {
+      const o = opnameById.get(i.opname_id);
+      const wh = o ? whById.get(o.warehouse_id) : null;
+      const systemQty = Number(i.system_quantity || 0);
+      const physicalQty = Number(i.counted_quantity || 0);
+      return {
+        id: i.id, date: o?.created_at || '', productId: i.product_id,
+        sku: i.products?.sku || '', name: i.products?.name || 'Barang',
+        warehouse: wh?.name || '', location: nestedName(i.locations) || '-',
+        systemQty, physicalQty, delta: physicalQty - systemQty,
+        user: o?.created_by_name || 'Petugas', note: i.notes || o?.notes || ''
+      };
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    state = { warehouses: warehouses.map(w => w.name), products, balances, transactions: tx, stocktakes, demo: false };
+    localStorage.removeItem(KEY);
+    renderAll();
+    setConnectionState('online', realtimeIsOnline ? 'Database & Realtime aktif' : 'Database Online');
+  } catch (error) {
+    console.error('GudangPro cloud load:', error);
+    setConnectionState('offline', 'Database Offline');
+    if (!quiet) toast(error.message || 'Data cloud gagal dimuat.');
+    throw error;
+  } finally {
+    cloudLoading = false;
+  }
+}
+function startRealtime() {
+  if (realtimeChannel) cloud.removeChannel(realtimeChannel);
+  const tables = ['warehouses', 'locations', 'products', 'inventory_balances', 'stock_movements', 'stock_opnames', 'stock_opname_items'];
+  realtimeChannel = cloud.channel('gudangpro-live-sync');
+  for (const table of tables) {
+    realtimeChannel = realtimeChannel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+      if (currentUser && !cloudLoading) loadCloudData(true).catch(() => {});
+    });
+  }
+  realtimeChannel.subscribe(status => {
+    realtimeIsOnline = status === 'SUBSCRIBED';
+    if (status === 'SUBSCRIBED') setConnectionState('online', 'Database & Realtime aktif');
+    else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setConnectionState('pending', 'Database Online · Realtime terputus');
+    applyRoleUI();
+  });
+}
+async function openAuthenticatedApp(user) {
+  currentUser = user;
+  try {
+    currentProfile = await getActiveProfile(user);
+  } catch (error) {
+    await cloud.auth.signOut();
+    currentUser = null; currentProfile = null;
+    showLogin(error.message || 'Akun tidak dapat digunakan.');
+    return;
+  }
+  showApp();
+  profileHeading();
+  try {
+    await loadCloudData(false);
+    startRealtime();
+    applyRoleUI();
+  } catch (error) {
+    toast(error.message || 'Koneksi database gagal.');
+  }
+}
+async function bootCloudApp() {
+  showLogin('Masuk menggunakan email admin atau username staff.');
+  document.getElementById('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const identity = document.getElementById('loginIdentity').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const message = document.getElementById('loginMessage');
+    const button = document.getElementById('loginSubmit');
+    if (!identity || !password) { message.textContent = 'Masukkan akun dan password.'; return; }
+    const email = identity.includes('@') ? identity.toLowerCase() : staffEmailFromUsername(identity);
+    button.disabled = true; button.textContent = 'Memeriksa akun...'; message.textContent = '';
+    const { data, error } = await cloud.auth.signInWithPassword({ email, password });
+    button.disabled = false; button.textContent = 'Masuk ke GudangPro';
+    if (error || !data?.user) { message.textContent = 'Login gagal. Periksa email/username dan password.'; return; }
+    await openAuthenticatedApp(data.user);
+  });
+  document.getElementById('signOutBtn').addEventListener('click', async () => {
+    if (realtimeChannel) { await cloud.removeChannel(realtimeChannel); realtimeChannel = null; }
+    await cloud.auth.signOut();
+    currentUser = null; currentProfile = null; state = defaultState();
+    showLogin('Anda sudah keluar dari GudangPro.');
+  });
+  cloud.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      currentUser = null; currentProfile = null;
+      if (realtimeChannel) { cloud.removeChannel(realtimeChannel); realtimeChannel = null; }
+      showLogin('Silakan masuk kembali.');
+    }
+  });
+  const { data } = await cloud.auth.getSession();
+  if (data?.session?.user) await openAuthenticatedApp(data.session.user);
+}
+
+// Keep the original screens, but route write operations through Supabase.
+const originalNavigate = navigate;
+navigate = function(page) {
+  if (!isAdmin() && ['settings', 'reports'].includes(page)) { toast('Menu ini hanya tersedia untuk admin.'); return; }
+  originalNavigate(page);
+};
+const originalRenderAll = renderAll;
+renderAll = function() { originalRenderAll(); applyRoleUI(); };
+const originalRenderSettings = renderSettings;
+renderSettings = function() {
+  originalRenderSettings();
+  const settingsGrid = document.querySelector('#page-settings .settings-grid');
+  const panel = document.getElementById('staffAdminPanel');
+  if (panel && settingsGrid && panel.parentElement !== settingsGrid) settingsGrid.prepend(panel);
+  if (panel) panel.style.display = isAdmin() ? '' : 'none';
+  applyRoleUI();
+};
+const originalOpenProduct = openProduct;
+openProduct = function(id) { if (!isAdmin()) { toast('Hanya admin yang dapat mengubah master barang.'); return; } return originalOpenProduct(id); };
+
+saveProduct = async function(e, id) {
+  e.preventDefault();
+  if (!isAdmin()) return toast('Hanya admin yang dapat mengubah master barang.');
+  const f = new FormData(e.target);
+  const payload = {
+    sku: f.get('sku').trim(), barcode: f.get('barcode').trim() || null,
+    name: f.get('name').trim(), category: f.get('category').trim(), unit: f.get('unit'),
+    min_stock: Number(f.get('minStock') || 0), cost: Number(f.get('cost') || 0), supplier: f.get('supplier').trim()
+  };
+  if (state.products.some(p => p.sku.toLowerCase() === payload.sku.toLowerCase() && p.id !== id)) return toast('SKU sudah digunakan.');
+  try {
+    if (id) {
+      const { error } = await cloud.from('products').update(payload).eq('id', id);
+      if (error) throw error;
+    } else {
+      const { data: product, error } = await cloud.from('products').insert(payload).select('id').single();
+      if (error) throw error;
+      const qty = Number(f.get('initialQty') || 0);
+      if (qty > 0) {
+        const warehouse = await ensureWarehouse(f.get('warehouse'));
+        const locationId = await getLocationId(warehouse.id, f.get('location') || '-');
+        const { error: movementError } = await cloud.from('stock_movements').insert({
+          product_id: product.id, warehouse_id: warehouse.id, location_id: locationId,
+          movement_type: 'in', quantity_delta: qty, reference_no: `OPEN-${Date.now()}`,
+          notes: 'Stok awal saat pembuatan barang', created_by: currentUser.id, created_by_name: currentOperatorName()
+        });
+        if (movementError) throw movementError;
+      }
+    }
+    closeModal(); await loadCloudData(true); toast(id ? 'Data barang diperbarui.' : 'Barang berhasil ditambahkan.');
+  } catch (error) { toast(error.message || 'Barang gagal disimpan.'); }
+};
+deleteProduct = async function(id) {
+  if (!isAdmin()) return toast('Hanya admin yang dapat menghapus master barang.');
+  const p = state.products.find(x => x.id === id); if (!p) return;
+  if (!confirm(`Nonaktifkan barang ${p.name}? Riwayat transaksi dan saldo lama akan tetap tersimpan.`)) return;
+  const { error } = await cloud.from('products').update({ is_active: false }).eq('id', id);
+  if (error) return toast(error.message || 'Barang gagal dinonaktifkan.');
+  await loadCloudData(true); toast('Barang dinonaktifkan. Riwayat tetap tersimpan.');
+};
+addWarehouse = async function() {
+  if (!isAdmin()) return toast('Hanya admin yang dapat menambah gudang.');
+  const input = document.getElementById('newWarehouse'); const name = input.value.trim();
+  if (!name) return;
+  if (state.warehouses.some(w => w.toLowerCase() === name.toLowerCase())) return toast('Nama gudang sudah ada.');
+  try { await ensureWarehouse(name); input.value = ''; await loadCloudData(true); toast('Gudang ditambahkan ke database.'); }
+  catch (error) { toast(error.message || 'Gudang gagal ditambahkan.'); }
+};
+
+saveTransaction = async function(e, type) {
+  e.preventDefault();
+  const f = new FormData(e.target), p = state.products.find(x => x.id === f.get('productId')), qty = Number(f.get('qty'));
+  if (!p || !Number.isFinite(qty) || qty <= 0) return toast('Pilih barang dan jumlah yang valid.');
+  const reference = f.get('reference').trim();
+  const note = [reference ? `Ref: ${reference}` : '', f.get('note').trim()].filter(Boolean).join(' · ');
+  try {
+    if (type === 'move') {
+      const src = state.balances.find(b => b.id === f.get('sourceId'));
+      if (!src || src.qty < qty) return toast('Stok di lokasi asal tidak mencukupi.');
+      const destWarehouse = await ensureWarehouse(f.get('toWarehouse'));
+      const destLocationId = await getLocationId(destWarehouse.id, f.get('toLocation').trim() || '-');
+      const transferRef = `MUT-${Date.now()}`;
+      const { error } = await cloud.rpc('transfer_stock', {
+        p_product_id: p.id, p_source_warehouse_id: src.warehouseId, p_source_location_id: src.locationId,
+        p_destination_warehouse_id: destWarehouse.id, p_destination_location_id: destLocationId,
+        p_quantity: qty, p_reference_no: transferRef, p_notes: note || 'Mutasi antar lokasi'
+      });
+      if (error) throw error;
+    } else {
+      const warehouse = await ensureWarehouse(f.get('warehouse'));
+      const locationId = await getLocationId(warehouse.id, f.get('location').trim() || '-');
+      const movementType = type === 'return' ? 'return' : type;
+      const delta = type === 'out' ? -qty : qty;
+      const { error } = await cloud.from('stock_movements').insert({
+        product_id: p.id, warehouse_id: warehouse.id, location_id: locationId,
+        movement_type: movementType, quantity_delta: delta,
+        reference_no: reference || `TRX-${Date.now()}`, notes: note,
+        created_by: currentUser.id, created_by_name: currentOperatorName()
+      });
+      if (error) throw error;
+    }
+    closeModal(); await loadCloudData(true); toast('Transaksi tersimpan ke database.');
+  } catch (error) { toast(error.message || 'Transaksi gagal disimpan.'); }
+};
+
+async function submitStocktake(form, inline) {
+  const f = new FormData(form);
+  const productId = f.get('productId');
+  const balanceId = f.get('balanceId');
+  const b = state.balances.find(x => x.id === balanceId);
+  const p = state.products.find(x => x.id === productId);
+  const raw = f.get('physicalQty');
+  const counted = Number(raw);
+  if (!p || !b) throw new Error('Pilih barang dan lokasi yang memiliki saldo.');
+  if (raw === null || String(raw).trim() === '' || !Number.isFinite(counted) || counted < 0) throw new Error('Jumlah fisik harus berupa angka nol atau lebih.');
+  const opnameNo = `OPN-${Date.now()}`;
+  const { error } = await cloud.rpc('apply_stocktake', {
+    p_product_id: p.id, p_warehouse_id: b.warehouseId, p_location_id: b.locationId,
+    p_counted_quantity: counted, p_opname_no: opnameNo,
+    p_notes: f.get('note') || '', p_created_by_name: currentOperatorName()
+  });
+  if (error) throw error;
+  if (inline) form.reset(); else closeModal();
+  await loadCloudData(true);
+  toast('Stock opname tersimpan dan saldo diperbarui.');
+}
+saveStocktakeInline = async function(e) { e.preventDefault(); try { await submitStocktake(e.target, true); } catch (error) { toast(error.message || 'Stock opname gagal.'); } };
+saveStocktake = async function(e) { e.preventDefault(); try { await submitStocktake(e.target, false); } catch (error) { toast(error.message || 'Stock opname gagal.'); } };
+
+// Excel import now writes to the cloud database, never just to this browser.
+importProducts = async function(e) {
+  if (!isAdmin()) { e.target.value = ''; return toast('Import barang hanya tersedia untuk admin.'); }
+  const file = e.target.files?.[0]; if (!file) return;
+  try {
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      try {
+        let rows;
+        if (window.XLSX) { const wb = XLSX.read(ev.target.result, { type: 'array' }); rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' }); }
+        else { rows = parseCSV(new TextDecoder().decode(ev.target.result)); }
+        let count = 0;
+        for (const r of rows) {
+          const norm = {}; Object.keys(r).forEach(k => norm[k.toLowerCase().replace(/[ _-]/g, '')] = r[k]);
+          const sku = String(norm.sku || norm.kode || '').trim();
+          const name = String(norm.nama || norm.namabarang || norm.name || '').trim();
+          if (!sku || !name) continue;
+          const value = (...keys) => { for (const k of keys) if (norm[k] !== undefined && norm[k] !== '') return norm[k]; return ''; };
+          const payload = {
+            sku, barcode: String(value('barcode', 'upc') || '').trim() || null, name,
+            category: String(value('kategori', 'category')), unit: String(value('satuan', 'unit') || 'pcs'),
+            min_stock: Number(value('minimum', 'stokminimum', 'minstock') || 0),
+            cost: Number(value('hargamodal', 'cost') || 0), supplier: String(value('supplier'))
+          };
+          const { data: existing, error: lookupError } = await cloud.from('products').select('id').eq('sku', sku).maybeSingle();
+          if (lookupError) throw lookupError;
+          let productId = existing?.id;
+          if (productId) {
+            const { error } = await cloud.from('products').update(payload).eq('id', productId);
+            if (error) throw error;
+          } else {
+            const { data, error } = await cloud.from('products').insert(payload).select('id').single();
+            if (error) throw error; productId = data.id;
+          }
+          const qtyRaw = value('stok', 'stock', 'jumlah');
+          if (qtyRaw !== '') {
+            const warehouse = await ensureWarehouse(String(value('gudang', 'warehouse') || 'Gudang Utama'));
+            const locationName = String(value('lokasi', 'location') || '-');
+            const locationId = await getLocationId(warehouse.id, locationName);
+            let balanceQuery = cloud.from('inventory_balances').select('quantity').eq('product_id', productId).eq('warehouse_id', warehouse.id);
+            balanceQuery = locationId ? balanceQuery.eq('location_id', locationId) : balanceQuery.is('location_id', null);
+            const { data: bal, error: balError } = await balanceQuery.maybeSingle();
+            if (balError) throw balError;
+            const delta = Number(qtyRaw) - Number(bal?.quantity || 0);
+            if (delta !== 0) {
+              const { error } = await cloud.from('stock_movements').insert({
+                product_id: productId, warehouse_id: warehouse.id, location_id: locationId,
+                movement_type: 'adjustment', quantity_delta: delta, reference_no: `IMP-${Date.now()}`,
+                notes: 'Penyesuaian dari import Excel', created_by: currentUser.id, created_by_name: currentOperatorName()
+              });
+              if (error) throw error;
+            }
+          }
+          count++;
+        }
+        await loadCloudData(true); toast(`${count} barang berhasil diproses ke database.`);
+      } catch (error) { toast(error.message || 'Import gagal diproses.'); }
+      e.target.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  } catch (error) { e.target.value = ''; toast(error.message || 'File tidak dapat dibaca.'); }
+};
+restoreData = function(e) { e.target.value = ''; toast('Pemulihan backup cloud sedang kami amankan; gunakan Export untuk menyimpan salinan data saat ini.'); };
+clearDemo = function() { toast('Data demo tidak dipakai pada mode cloud.'); };
+resetDemo = function() { toast('Data demo tidak dipakai pada mode cloud.'); };
+
+// Staff accounts are created through a protected Edge Function; passwords never enter the database.
+async function callStaffAdmin(payload) {
+  const { data, error } = await cloud.functions.invoke('staff-admin', { body: payload });
+  if (error) {
+    let message = error.message || 'Permintaan pengelolaan staff gagal.';
+    try { const body = await error.context?.json?.(); if (body?.error) message = body.error; } catch (_) {}
+    throw new Error(message);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+async function loadStaffList() {
+  const list = document.getElementById('staffList'); if (!list || !isAdmin()) return;
+  list.innerHTML = '<div class="item-sub">Memuat akun staff...</div>';
+  try {
+    const data = await callStaffAdmin({ action: 'list' });
+    if (!data.staff?.length) { list.innerHTML = '<div class="empty">Belum ada akun staff. Tekan Tambah Staff untuk membuat akses login.</div>'; return; }
+    list.innerHTML = data.staff.map(s => `<div class="staff-row"><div><b>${esc(s.full_name || s.username)}</b><div class="item-sub">Username: ${esc(s.username || '-')} · ${s.is_active ? 'Aktif' : 'Nonaktif'}</div></div><button class="btn small" onclick="editStaff('${s.id}','${esc(s.username || '')}','${esc(s.full_name || '')}',${s.is_active ? 'true' : 'false'})">Kelola</button></div>`).join('');
+  } catch (error) { list.innerHTML = `<div class="notice warn">${esc(error.message)}</div>`; }
+}
+function openStaffForm() {
+  if (!isAdmin()) return;
+  const body = `<form id="staffForm" class="form-grid" onsubmit="saveStaff(event,'create')"><div class="field"><label>Nama Staff *</label><input name="full_name" required placeholder="Nama petugas"></div><div class="field"><label>Username *</label><input name="username" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]+" placeholder="contoh: staff01"></div><div class="field full"><label>Password awal *</label><input type="password" name="password" required minlength="8" autocomplete="new-password"><small>Minimal 8 karakter. Bagikan langsung kepada staff secara aman.</small></div></form>`;
+  openModal('Buat Akun Staff', body, `<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" onclick="document.getElementById('staffForm').requestSubmit()">Buat Akun</button>`);
+}
+function editStaff(id, username, fullName, active) {
+  if (!isAdmin()) return;
+  const body = `<form id="staffForm" class="form-grid" onsubmit="saveStaff(event,'update','${id}')"><div class="field"><label>Nama Staff *</label><input name="full_name" required value="${fullName}"></div><div class="field"><label>Username *</label><input name="username" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]+" value="${username}"></div><div class="field full"><label>Password baru (opsional)</label><input type="password" name="password" minlength="8" autocomplete="new-password" placeholder="Kosongkan jika tidak diubah"></div><div class="field full"><label><input type="checkbox" name="is_active" ${active ? 'checked' : ''} style="width:auto"> Akun aktif</label><small>Akun nonaktif tidak dapat menggunakan database GudangPro.</small></div></form>`;
+  openModal('Kelola Akun Staff', body, `<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" onclick="document.getElementById('staffForm').requestSubmit()">Simpan Perubahan</button>`);
+}
+saveStaff = async function(e, action, id = '') {
+  e.preventDefault(); if (!isAdmin()) return;
+  const f = new FormData(e.target);
+  const payload = { action, username: String(f.get('username') || '').trim().toLowerCase(), full_name: String(f.get('full_name') || '').trim() };
+  if (String(f.get('password') || '')) payload.password = String(f.get('password'));
+  if (action === 'update') { payload.user_id = id; payload.is_active = f.get('is_active') === 'on'; }
+  try { await callStaffAdmin(payload); closeModal(); await loadStaffList(); toast(action === 'create' ? 'Akun staff berhasil dibuat.' : 'Akun staff berhasil diperbarui.'); }
+  catch (error) { toast(error.message || 'Akun staff gagal disimpan.'); }
+};
+
+// Keep staff management list refreshed whenever the Admin opens Settings.
+const oldSettingsRenderForStaff = renderSettings;
+renderSettings = function() {
+  oldSettingsRenderForStaff();
+  const panel = document.getElementById('staffAdminPanel');
+  if (panel) panel.style.display = isAdmin() ? '' : 'none';
+  if (isAdmin()) loadStaffList();
+  applyRoleUI();
+};
+
+bootCloudApp().catch(error => {
+  console.error('GudangPro startup:', error);
+  showLogin('Koneksi awal gagal. Periksa koneksi internet lalu muat ulang halaman.');
+  setConnectionState('offline', 'Database Offline');
+});
+
 </script>
 </body></html>
