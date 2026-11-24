@@ -295,29 +295,10 @@ function restoreData(e){const file=e.target.files[0];if(!file)return;const r=new
 function clearDemo(){if(!confirm('Hapus seluruh data contoh? Tindakan ini menghapus barang, saldo, transaksi, dan catatan stock opname contoh.'))return;state=defaultState();save();renderAll();toast('Data contoh dihapus. Aplikasi siap diisi.');}
 function resetDemo(){if(!confirm('Muat ulang data contoh? Data yang ada sekarang akan diganti. Buat backup dahulu bila diperlukan.'))return;state=seed();save();renderAll();toast('Data demo dimuat ulang.');}
 let activeBarcodeScanner=null,scanTarget='',scanHandled=false;
-async function chooseMainRearCamera(){
-  // Let Android/Chrome choose its default rear camera for the environment constraint.
-  // On most phones this is the primary 1x lens, unlike manually picking an arbitrary rear camera ID.
-  let stream=null;
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{exact:'environment'}},
-      audio:false
-    });
-    const track=stream.getVideoTracks()[0];
-    if(!track)throw new Error('no-camera');
-    const settings=track.getSettings?track.getSettings():{};
-    const selectedId=settings.deviceId||'';
-    const selectedLabel=String(track.label||'');
-    if(!selectedId)throw new Error('no-camera-id');
-    return {id:selectedId,label:selectedLabel};
-  }finally{
-    stream?.getTracks().forEach(track=>track.stop());
-  }
-}
+
 async function openScanner(target){
   scanTarget=target;scanHandled=false;
-  const body=`<div class="notice">Arahkan barcode barang ke dalam kotak kamera. Pemindaian mendukung barcode EAN/UPC, Code 128, Code 39, ITF, dan QR. Kamera belakang utama (1x) akan diprioritaskan.</div><div id="scannerRegion" class="scanner-region"></div><div id="scannerStatus" class="scanner-help">Menyiapkan pemindai kamera...</div>`;
+  const body=`<div class="notice">Arahkan barcode barang ke dalam kotak kamera. Pemindaian mendukung barcode EAN/UPC, Code 128, Code 39, ITF, dan QR. Kamera belakang default perangkat akan dipilih otomatis.</div><div id="scannerRegion" class="scanner-region"></div><div id="scannerStatus" class="scanner-help">Menyiapkan pemindai kamera...</div>`;
   openModal('Scan Barcode',body,`<button class="btn" onclick="closeModal()">Tutup</button>`,true);
   try{
     if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia)throw new Error('secure');
@@ -325,10 +306,8 @@ async function openScanner(target){
     const formats=[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,Html5QrcodeSupportedFormats.ITF,Html5QrcodeSupportedFormats.QR_CODE];
     activeBarcodeScanner=new Html5Qrcode('scannerRegion',{formatsToSupport:formats,verbose:false,useBarCodeDetectorIfSupported:false});
     const status=document.getElementById('scannerStatus');
-    if(status)status.textContent='Memilih kamera belakang utama...';
-    const selectedCamera=await chooseMainRearCamera();
-    if(status)status.textContent='Mengaktifkan kamera belakang utama: '+(selectedCamera.label||'kamera default belakang')+'...';
-    await activeBarcodeScanner.start(selectedCamera.id,{fps:10,qrbox:(w,h)=>({width:Math.max(180,Math.floor(Math.min(w*.9,420))),height:Math.max(90,Math.floor(Math.min(h*.34,150)))})},async(decodedText)=>{
+    if(status)status.textContent='Mengaktifkan kamera belakang default perangkat...';
+    await activeBarcodeScanner.start({facingMode:'environment'},{fps:10,qrbox:(w,h)=>({width:Math.max(180,Math.floor(Math.min(w*.9,420))),height:Math.max(90,Math.floor(Math.min(h*.34,150)))})},async(decodedText)=>{
       if(scanHandled)return;
       scanHandled=true;
       const value=String(decodedText||'').trim();
@@ -338,14 +317,14 @@ async function openScanner(target){
       if(targetEl){targetEl.value=value;targetEl.dispatchEvent(new Event('input',{bubbles:true}));targetEl.focus();}
       toast('Barcode terbaca: '+value);
     },()=>{});
-    if(status)status.textContent='Kamera belakang utama aktif — arahkan barcode ke dalam kotak.';
+    if(status)status.textContent='Kamera belakang default perangkat aktif — arahkan barcode ke dalam kotak.';
   }catch(err){
     const el=document.getElementById('scannerStatus');
     if(el){
       if(err?.message==='secure')el.textContent='Kamera tidak tersedia pada file yang dibuka langsung. Jalankan aplikasi melalui alamat HTTPS (misalnya GitHub Pages), lalu izinkan akses kamera.';
       else if(err?.message==='library')el.textContent='Mesin pemindai belum berhasil dimuat. Periksa koneksi internet, lalu tutup dan coba lagi.';
       else if(err?.message==='no-camera'||err?.message==='no-camera-id')el.textContent='Kamera belakang tidak ditemukan. Periksa izin kamera perangkat.';
-      else el.textContent='Kamera belakang utama tidak dapat diakses. Pastikan izin kamera diberikan dan kamera tidak sedang dipakai aplikasi lain.';
+      else el.textContent='Kamera belakang default tidak dapat diakses. Pastikan izin kamera diberikan dan kamera tidak sedang dipakai aplikasi lain.';
     }
     await stopScanner();
   }
