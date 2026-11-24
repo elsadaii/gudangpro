@@ -421,7 +421,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.3.8';
+const GUDANGPRO_APP_VERSION = '0.3.9';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -464,11 +464,18 @@ async function startStaffSession(){
  }catch(e){console.warn('Session tracking unavailable',e);}
 }
 async function endStaffSession(){if(sessionHeartbeatTimer){clearInterval(sessionHeartbeatTimer);sessionHeartbeatTimer=null;}if(gudangproSessionId){try{await cloud.from('staff_login_sessions').update({ended_at:new Date().toISOString(),last_seen_at:new Date().toISOString()}).eq('id',gudangproSessionId);}catch(e){}gudangproSessionId=null;}}
+async function approveStaffActivation(requestId){
+ if(!isAdmin())return;
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(requestId||'')))return toast('Permintaan aktivasi tidak valid.');
+ if(!confirm('Setujui permintaan ini dan aktifkan akun staff?'))return;
+ try{await callStaffAdmin({action:'approve_activation',request_id:requestId});toast('Akun staff berhasil diaktifkan.');await refreshAdminActivity();await loadStaffList();}
+ catch(e){toast(e.message||'Akun staff gagal diaktifkan.');}
+}
 async function refreshAdminActivity(){
  const panel=document.getElementById('adminActivityPanel'),body=document.getElementById('adminActivityBody');if(!panel||!body||!isAdmin())return;panel.style.display='';
  try{const [sessions,requests]=await Promise.all([cloud.from('staff_login_sessions').select('*').is('ended_at',null).gte('last_seen_at',new Date(Date.now()-120000).toISOString()).order('last_seen_at',{ascending:false}),cloud.from('staff_activation_requests').select('*').eq('status','pending').order('requested_at',{ascending:false})]);
  if(sessions.error)throw sessions.error;if(requests.error)throw requests.error;
- body.innerHTML='<h4 style="margin:0 0 8px">Staff aktif ('+sessions.data.length+')</h4>'+ (sessions.data.length?sessions.data.map(x=>'<div class="staff-row"><div><b>'+esc(x.full_name||x.username||'Staff')+'</b><div class="item-sub">Login: '+new Date(x.started_at).toLocaleString('id-ID')+' · Aktif: '+new Date(x.last_seen_at).toLocaleTimeString('id-ID')+'</div></div><span class="badge good">Online</span></div>').join(''):'<div class="item-sub">Tidak ada staff aktif.</div>')+'<h4 style="margin:18px 0 8px">Permintaan aktivasi ('+requests.data.length+')</h4>'+(requests.data.length?requests.data.map(x=>'<div class="staff-row"><div><b>'+esc(x.username)+'</b><div class="item-sub">'+new Date(x.requested_at).toLocaleString('id-ID')+'</div></div><span class="badge warn">Menunggu</span></div>').join(''):'<div class="item-sub">Tidak ada permintaan aktivasi.</div>');
+ body.innerHTML='<h4 style="margin:0 0 8px">Staff aktif ('+sessions.data.length+')</h4>'+ (sessions.data.length?sessions.data.map(x=>'<div class="staff-row"><div><b>'+esc(x.full_name||x.username||'Staff')+'</b><div class="item-sub">Login: '+new Date(x.started_at).toLocaleString('id-ID')+' · Aktif: '+new Date(x.last_seen_at).toLocaleTimeString('id-ID')+'</div></div><span class="badge good">Online</span></div>').join(''):'<div class="item-sub">Tidak ada staff aktif.</div>')+'<h4 style="margin:18px 0 8px">Permintaan aktivasi ('+requests.data.length+')</h4>'+(requests.data.length?requests.data.map(x=>'<div class="staff-row"><div><b>'+esc(x.username)+'</b><div class="item-sub">'+new Date(x.requested_at).toLocaleString('id-ID')+'</div></div><div style="display:flex;align-items:center;gap:8px"><span class="badge warn">Menunggu</span><button class="btn small primary" type="button" onclick="approveStaffActivation(\''+esc(x.id)+'\')">Setujui</button></div></div>').join(''):'<div class="item-sub">Tidak ada permintaan aktivasi.</div>');
  }catch(e){body.innerHTML='<div class="notice warn">Panel aktivitas tidak dapat dimuat: '+esc(e.message||'')+'</div>';}
 }
 
