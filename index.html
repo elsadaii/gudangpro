@@ -420,7 +420,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.3.3';
+const GUDANGPRO_APP_VERSION = '0.3.4';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -474,7 +474,8 @@ async function refreshAdminActivity(){
   document.getElementById('appRoot').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'grid';
   const m = document.getElementById('loginMessage');
-  if (m) m.textContent = message;\n  showActivationLink(document.getElementById('loginIdentity')?.value||'');
+  if (m) m.textContent = message;
+  showActivationLink(document.getElementById('loginIdentity')?.value||'');
   const signOut = document.getElementById('signOutBtn');
   if (signOut) signOut.style.display = 'none';
 }
@@ -713,7 +714,12 @@ async function openAuthenticatedApp(user) {
   }
 }
 async function bootCloudApp() {
-  showLogin('Masuk menggunakan email admin atau username staff.');
+  showLogin('Siap untuk login. Masukkan akun dan password.');
+  // Background connection check: login stays available even if this check is slow.
+  cloud.from('profiles').select('id').limit(1).then(({error}) => {
+    if (error) { console.warn('GudangPro connection check:', error); setConnectionState('offline', 'Database tidak dapat dijangkau'); }
+    else setConnectionState('online', 'Database Online');
+  }).catch(error => { console.warn('GudangPro connection check:', error); setConnectionState('offline', 'Database tidak dapat dijangkau'); });
   document.getElementById('loginForm').addEventListener('submit', async e => {
     e.preventDefault();
     const identity = document.getElementById('loginIdentity').value.trim();
