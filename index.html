@@ -162,6 +162,7 @@ tbody tr:hover{background:#f7faff}
     <button data-page="stocktake"><span class="ico">☑</span>Stock Opname</button>
     <button data-page="reports"><span class="ico">▥</span>Laporan</button>
     <button data-page="database" id="databaseNav" style="display:none"><span class="ico">▦</span>Database</button>
+    <button data-page="about"><span class="ico">ⓘ</span>Tentang Aplikasi</button>
   </nav>
   <div class="nav-label" style="margin-top:18px">System</div>
   <nav class="nav"><button data-page="settings"><span class="ico">⚙</span>Pengaturan & Backup</button></nav>
@@ -228,8 +229,24 @@ tbody tr:hover{background:#f7faff}
     <div class="panel"><div class="panel-head"><div><h3>Lokasi Gudang</h3><p>Daftar lokasi yang bisa dipilih saat transaksi.</p></div></div><div class="panel-body"><div id="warehouseTags" class="warehouse-tags" style="margin-bottom:15px"></div><div class="field"><label>Tambah nama gudang</label><div style="display:flex;gap:8px"><input id="newWarehouse" placeholder="Contoh: Gudang Cabang 2"><button class="btn primary" onclick="addWarehouse()">Tambah</button></div></div></div></div>
     <div class="panel"><div class="panel-head"><div><h3>Backup & Pemulihan</h3><p>Simpan salinan data atau pulihkan dari file backup.</p></div></div><div class="panel-body"><p style="font-size:12px;color:#738196;line-height:1.7;margin-top:0">Backup mencakup master barang, saldo di setiap lokasi, transaksi, stock opname, dan daftar gudang.</p><div class="actions" style="margin-bottom:15px"><button class="btn primary" onclick="backupData()">↓ Download Backup</button><button class="btn" onclick="document.getElementById('restoreFile').click()">↑ Pulihkan Backup</button><input id="restoreFile" type="file" accept=".json" hidden onchange="restoreData(event)"></div><div class="notice success" style="margin:0">Disarankan membuat backup secara berkala, terutama sebelum mengimpor banyak data.</div></div></div>
     <div class="panel"><div class="panel-head"><div><h3>Data Contoh</h3><p>Kelola data demo untuk mencoba aplikasi.</p></div></div><div class="panel-body"><p style="font-size:12px;color:#738196;line-height:1.7;margin-top:0">Versi awal dilengkapi data contoh agar alur dashboard dan transaksi dapat dicoba. Data ini bukan data gudang sebenarnya.</p><div class="actions"><button class="btn danger" onclick="clearDemo()">Hapus Data Contoh</button><button class="btn" onclick="resetDemo()">Muat Ulang Demo</button></div></div></div>
-    <div class="panel"><div class="panel-head"><div><h3>Informasi Aplikasi</h3><p>Versi dan status penyimpanan.</p></div></div><div class="panel-body" style="font-size:12px;line-height:2;color:#728095"><div><b style="color:#344256">Nama:</b> GudangPro Starter</div><div><b style="color:#344256">Versi:</b> <span id="appVersionInfo">0.3.0</span></div><div><b style="color:#344256">Penyimpanan:</b> Browser (localStorage)</div><div><b style="color:#344256">Koneksi database:</b> Belum terhubung</div><div><b style="color:#344256">Akses:</b> Perangkat ini saja</div></div></div>
+    
   </div>
+</section>
+<section class="section" id="page-about">
+  <div class="page-head"><div><h1>Tentang GudangPro</h1><p>Informasi dan panduan singkat aplikasi pengelolaan gudang.</p></div></div>
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-body" style="padding:24px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px"><div class="brand-mark" style="flex:0 0 48px;width:48px;height:48px">G</div><div><h2 style="margin:0 0 4px;font-size:21px;color:#1b2d46">GudangPro</h2><div style="font-size:12px;color:#8290a2">Sistem Manajemen Persediaan Gudang</div></div></div>
+      <p style="font-size:13px;line-height:1.8;color:#64748b;margin:0">GudangPro membantu mengelola persediaan barang secara terpusat dan online. Data tersimpan di database cloud sehingga Admin dan Staff dapat bekerja menggunakan akun masing-masing dan melihat data yang tersinkron antarperangkat.</p>
+    </div>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:16px">
+    <div class="panel"><div class="panel-body"><b style="font-size:13px;color:#26364b">📦 Data Barang</b><p style="font-size:12px;line-height:1.7;color:#718096;margin-bottom:0">Kelola master barang, SKU, barcode, kategori, satuan, dan batas stok minimum.</p></div></div>
+    <div class="panel"><div class="panel-body"><b style="font-size:13px;color:#26364b">⇄ Transaksi Stok</b><p style="font-size:12px;line-height:1.7;color:#718096;margin-bottom:0">Catat barang masuk, barang keluar, retur, serta mutasi antar gudang dan lokasi.</p></div></div>
+    <div class="panel"><div class="panel-body"><b style="font-size:13px;color:#26364b">▣ Barcode & Opname</b><p style="font-size:12px;line-height:1.7;color:#718096;margin-bottom:0">Gunakan kamera untuk memindai barcode dan cocokkan stok sistem dengan jumlah fisik.</p></div></div>
+    <div class="panel"><div class="panel-body"><b style="font-size:13px;color:#26364b">☁️ Database Cloud</b><p style="font-size:12px;line-height:1.7;color:#718096;margin-bottom:0">Data disimpan online dan diperbarui antarperangkat melalui sinkronisasi database.</p></div></div>
+  </div>
+  <div class="panel"><div class="panel-head"><div><h3>Informasi Aplikasi</h3><p>Identitas dan status sistem yang sedang digunakan.</p></div></div><div class="panel-body" id="aboutAppInfo" style="font-size:12px;line-height:2;color:#728095"><div><b style="color:#344256">Nama:</b> GudangPro</div><div><b style="color:#344256">Versi:</b> <span id="appVersionInfo">0.4.3</span></div><div><b style="color:#344256">Penyimpanan:</b> Supabase Cloud</div><div><b style="color:#344256">Akses:</b> Admin dan Staff Gudang</div><div><b style="color:#344256">Sinkronisasi:</b> Realtime database</div></div></div>
 </section>
 </div></main></div>
 <div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"><div class="modal-head"><h2 id="modalTitle">Form</h2><button class="close" onclick="closeModal()">×</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
@@ -265,7 +282,7 @@ function productBalances(p){return state.balances.filter(b=>b.productId===p.id)}
 function statusOf(p){const q=totalStock(p);return q<=0?'out':q<=Number(p.minStock||0)?'low':'ok'}
 function statusBadge(p){const s=statusOf(p);return s==='out'?'<span class="badge bad">● Habis</span>':s==='low'?'<span class="badge warn">● Menipis</span>':'<span class="badge good">● Aman</span>'}
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2600)}
-const titles={dashboard:'Dashboard',products:'Data Barang',transactions:'Transaksi Stok',stocktake:'Stock Opname',reports:'Laporan',database:'Database',settings:'Pengaturan'};
+const titles={dashboard:'Dashboard',products:'Data Barang',transactions:'Transaksi Stok',stocktake:'Stock Opname',reports:'Laporan',database:'Database',settings:'Pengaturan',about:'Tentang Aplikasi'};
 function navigate(page){if(page==='database'&&!isAdmin()){toast('Halaman ini hanya untuk admin.');return;}document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+page).classList.add('active');document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));document.getElementById('crumbTitle').textContent=titles[page]||page;document.getElementById('sidebar').classList.remove('open');setMobileMenu(false);renderAll();if(page==='database')loadDatabaseTable();}
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
 
@@ -445,7 +462,7 @@ async function handleGudangProScan(decodedText){
 renderAll();
 
 // GudangPro cloud layer — v0.2.0
-const GUDANGPRO_APP_VERSION = '0.4.2';
+const GUDANGPRO_APP_VERSION = '0.4.3';
 const GUDANGPRO_SB_URL = 'https://mvvwmwgprumhtiakbsgs.supabase.co';
 const GUDANGPRO_SB_KEY = 'sb_publishable_OAVzrpLrmH9B3fvBCntvkQ_Z55Co5xB';
 const cloud = window.supabase.createClient(GUDANGPRO_SB_URL, GUDANGPRO_SB_KEY, {
@@ -579,8 +596,8 @@ function applyRoleUI() {
     note.className = 'notice success';
     note.innerHTML = '<b>Database online:</b> data barang, saldo, transaksi, dan stock opname tersimpan di Supabase GudangPro dan disinkronkan antarperangkat.';
   }
-  const info = document.querySelector('#page-settings .settings-grid .panel:last-child .panel-body');
-  if (info) info.innerHTML = `<div><b style="color:#344256">Nama:</b> GudangPro</div><div><b style="color:#344256">Versi:</b> 0.2.0</div><div><b style="color:#344256">Penyimpanan:</b> Supabase cloud</div><div><b style="color:#344256">Database:</b> ${GUDANGPRO_SB_URL}</div><div><b style="color:#344256">Akses:</b> ${isAdmin() ? 'Admin' : 'Staff Gudang'}</div><div><b style="color:#344256">Sinkronisasi:</b> ${realtimeIsOnline ? 'Realtime aktif' : 'Database online'}</div>`;
+  const aboutInfo = document.getElementById('aboutAppInfo');
+  if (aboutInfo) aboutInfo.innerHTML = `<div><b style="color:#344256">Nama:</b> GudangPro</div><div><b style="color:#344256">Versi:</b> ${GUDANGPRO_APP_VERSION}</div><div><b style="color:#344256">Penyimpanan:</b> Supabase Cloud</div><div><b style="color:#344256">Akses saat ini:</b> ${isAdmin() ? 'Admin' : 'Staff Gudang'}</div><div><b style="color:#344256">Sinkronisasi:</b> ${realtimeIsOnline ? 'Realtime aktif' : 'Database online'}</div>`;
   profileHeading();
 }
 
