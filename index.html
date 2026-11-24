@@ -326,7 +326,7 @@ function profileHeading() {
   if (!el || !currentProfile) return;
   const name = esc(currentOperatorName());
   const role = isAdmin() ? 'Administrator' : 'Staff Gudang';
-  el.innerHTML = `<div class="avatar">${isAdmin() ? 'A' : 'S'}</div><div><b>${name}</b><div style="color:#8fa0b5;font-size:10px">${role}</div></div>`;
+  el.innerHTML = `<div class="avatar">${isAdmin() ? 'A' : 'S'}</div><div class="side-account"><b>${name}</b><button type="button" class="btn sidebar-logout" id="sidebarLogoutBtn">↪ Keluar</button><div style="color:#8fa0b5;font-size:10px">${role}</div></div>`;
   const bottom = document.querySelector('.side-bottom');
   if (bottom) {
     const old = bottom.querySelector('.gudangpro-footnote');
